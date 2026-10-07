@@ -7,6 +7,11 @@ metadata:
     app: demo
 spec:
   replicas: 2
+  # Recreate, not RollingUpdate: with strict one-per-node anti-affinity on a
+  # 2-node cluster there is no spare node to surge onto, so a rolling update
+  # deadlocks. Recreate tears down old pods first, then schedules new ones.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: demo
