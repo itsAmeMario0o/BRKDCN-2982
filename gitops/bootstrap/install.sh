@@ -9,7 +9,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 main() {
   kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
-  kubectl apply -n argocd -f "${INSTALL_URL}"
+  # Server-side apply: the applicationsets CRD is larger than the 256KB
+  # client-side last-applied annotation limit, so plain apply rejects it.
+  kubectl apply --server-side -n argocd -f "${INSTALL_URL}"
   kubectl -n argocd rollout status deploy/argocd-repo-server --timeout=180s
   kubectl -n argocd rollout status deploy/argocd-server --timeout=180s
   kubectl apply -f "${SCRIPT_DIR}/root-app.yaml"

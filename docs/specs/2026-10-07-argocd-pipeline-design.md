@@ -85,7 +85,7 @@ Deployment and Service.
 ```
 set -euo pipefail
 kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
-kubectl apply -n argocd -f <pinned argo-cd install.yaml URL>
+kubectl apply --server-side -n argocd -f <pinned argo-cd install.yaml URL>   # server-side: applicationsets CRD exceeds the client-side annotation limit
 kubectl -n argocd rollout status deploy/argocd-repo-server --timeout=180s
 kubectl apply -f ./root-app.yaml    # root-app.yaml sits beside install.sh
 ```
