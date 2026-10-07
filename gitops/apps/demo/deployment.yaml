@@ -22,6 +22,12 @@ spec:
                 matchLabels:
                   app: demo
               topologyKey: kubernetes.io/hostname
+      # One replica must land on the control-plane node to achieve one-per-node
+      # on this 2-node kind cluster; tolerate its NoSchedule taint.
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
       containers:
         - name: web
           image: nginx:1.27-alpine

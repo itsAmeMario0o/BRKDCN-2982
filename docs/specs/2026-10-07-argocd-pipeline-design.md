@@ -74,7 +74,9 @@ its own child Application.
 A trivial web Deployment (a pinned small image such as `nginx:1.27-alpine`) with
 two replicas and a `podAntiAffinity` on `kubernetes.io/hostname`, so one replica
 lands on `cilium-control-plane` and one on `cilium-worker`. This proves Argo
-schedules across both Cilium nodes. A ClusterIP Service fronts it.
+schedules across both Cilium nodes. The pod tolerates the control-plane
+`NoSchedule` taint so the second replica can land there. A ClusterIP Service
+fronts it.
 `namespace.yaml` creates the `demo` namespace; Argo applies it before the
 Deployment and Service.
 
