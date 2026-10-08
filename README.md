@@ -5,10 +5,10 @@ cluster (kind plus Cilium) peered into it over BGP, following the Cisco Live
 BRKDCN-2982 design. It is meant to be read and run on its own, as a takeaway
 that teaches the fabric, VXLAN, Cilium BGP, and the automation that builds them.
 
-The lab substrate (the Cisco Modeling Labs environment on Azure that makes the
-switches and the cluster exist) lives in a separate operational repo. This repo
-is the portable, durable source of truth for the fabric-as-code and its
-pipeline. It carries no secrets and no live addresses: real targets and
+The lab substrate that makes the switches and the cluster exist lives in a
+separate operational repo. This repo is the portable, durable source of truth
+for the fabric-as-code and its pipeline, independent of whatever provisions the
+underlying switches and nodes. It carries no secrets and no live addresses: real targets and
 credentials are supplied at run time from the operator's side.
 
 ## What is here now

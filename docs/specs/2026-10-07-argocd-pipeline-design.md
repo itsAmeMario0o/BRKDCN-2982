@@ -22,7 +22,7 @@ lane; Argo SSO, RBAC, projects, ApplicationSets, sync waves, and notifications.
 ## Prerequisites
 
 - A running kind cluster named `cilium` with Cilium installed (built by the
-  operational CML repo). The fabric itself is not required for Argo to run; it
+  operational substrate repo). The fabric itself is not required for Argo to run; it
   is only required for the optional fabric-reachability check below.
 - `kubectl` on the kind host with access to the cluster.
 - Outbound internet from the kind host to GitHub and the container registry
@@ -101,7 +101,7 @@ cd BRKDCN-2982/gitops/bootstrap
 ./install.sh
 ```
 
-The operational CML repo's only involvement is ensuring the cluster exists and
+The operational substrate repo's only involvement is ensuring the cluster exists and
 is reachable. It is not modified by this slice.
 
 ## Data flow
