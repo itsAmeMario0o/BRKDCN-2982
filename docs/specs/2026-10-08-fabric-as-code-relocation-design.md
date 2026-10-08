@@ -12,7 +12,7 @@ See ADR `docs/decisions/0002-fabric-as-code-lives-here.md` for why.
 
 | Moves here (portable fabric-as-code) | Stays in the operational repo (substrate) |
 |---|---|
-| `terraform/` - netascode `nac-nxos` data model, `main.tf`, vars, tool pins | the CML topology YAML (one realization of the fabric) |
+| `terraform/` - netascode `nac-nxos` data model, `main.tf`, vars, tool pins | the lab topology (one realization of the fabric) |
 | `ansible/` - `overlay.yml`, templates, `group_vars`, `host_vars`, example inventory | bring-up / teardown / import scripts |
 | `cilium/bgp.yaml` - Cilium BGP CRDs (reference design) | `setup-node-peering.sh` - macvlan, host routes, egress SNAT, cilium-config patch |
 |  | the real six management endpoints + credentials |
@@ -90,8 +90,8 @@ History is not rewritten; the files are added here fresh and removed there.
   against the live fabric shows **no changes** (the relocated config is identical
   to what is deployed).
 - `ansible-playbook ... --check` reports no unexpected changes.
-- The existing pyATS verification (`scripts/80-verify-lab.sh cilium-evpn`) still
-  passes against the running fabric.
+- The operational repo's pyATS verification still passes against the running
+  fabric.
 - A clean checkout of this repo plus the operator override reproduces the fabric
   with no files living in the operational repo except substrate and the override.
 - No secret, credential, or real reachable endpoint appears in this repo.

@@ -25,7 +25,7 @@ repo and sit beside `gitops/`. This repo becomes the complete, portable
 fabric-as-code: readable and runnable on its own against any fabric that matches
 the design, not only the one lab.
 
-The operational repo keeps only substrate and lab glue: the CML topology, the
+The operational repo keeps only substrate and lab glue: the lab topology, the
 bring-up and teardown scripts, `setup-node-peering.sh` (macvlan, host routes, the
 egress SNAT, the Cilium config patch), and the real six management endpoints plus
 credentials. It runs this repo's automation from a sibling checkout.
@@ -51,8 +51,8 @@ uses; it is not a new mechanism.
 - Vendored Ansible collections, the Python venv, and Terraform state stay
   gitignored and regenerate; they do not move.
 - `setup-node-peering.sh` stays in the operational repo. It is lab glue (it only
-  exists because of the CML/kind host), and it references `cilium/bgp.yaml` from
-  the sibling checkout.
+  exists because of the kind host's networking), and it references
+  `cilium/bgp.yaml` from the sibling checkout.
 - The relocation touches both repos in one coordinated change: files are added
   here and removed from the operational repo, which keeps a sibling-path pointer
   instead.
@@ -62,7 +62,7 @@ uses; it is not a new mechanism.
 - Keep the fabric-as-code in the operational repo. Rejected: that repo is
   disposable and environment-specific; it is the wrong home for the durable
   teaching artifact (the same reasoning as ADR 0001).
-- Generate the endpoints from the CML topology. Rejected: a generator for a
+- Generate the endpoints from the lab topology. Rejected: a generator for a
   six-line list that changes almost never is far more machinery than the problem
   warrants.
 - Pass the real data model and inventory as file-path arguments so nothing real
