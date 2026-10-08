@@ -1,0 +1,11 @@
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+!terraform.tfvars.example
+# Ansible
+ansible/collections/
+ansible/.rendered/
+# Python venvs
+**/.venv/

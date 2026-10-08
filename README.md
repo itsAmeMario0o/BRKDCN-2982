@@ -13,16 +13,22 @@ credentials are supplied at run time from the operator's side.
 
 ## What is here now
 
-The cluster automation lane, slice 1: GitOps with Argo CD.
+The fabric-as-code and the cluster automation lane:
 
+- `terraform/` - the VXLAN EVPN underlay as a netascode `nac-nxos` data model.
+  Endpoints come from the `switch_urls` variable; credentials from the
+  environment. The committed data model is the reference design (no `url:`).
+- `ansible/` - the EVPN overlay (Jinja templates + data model) run device-direct
+  over NX-API. Inventory hosts are placeholders; override with `-i`.
+- `cilium/bgp.yaml` - the Cilium AS-per-cluster BGP config (the CRDs that peer
+  each node to its leaf).
 - `gitops/` - Argo CD bootstrap and the app-of-apps tree. Argo runs in the
   cluster and reconciles these manifests from this repo, pull-based, nothing
   inbound. See `docs/specs/2026-10-07-argocd-pipeline-design.md`.
 - `docs/decisions/` - the architectural decisions (start with ADR 0001).
 
-More lands here over time: the Terraform underlay, the Ansible EVPN overlay, the
-Cilium BGP config, CI, and the observability bridge. Each arrives as its own
-slice with its own spec.
+More lands here over time: CI and the observability bridge. Each arrives as its
+own slice with its own spec.
 
 ## Bootstrap the GitOps pipeline
 

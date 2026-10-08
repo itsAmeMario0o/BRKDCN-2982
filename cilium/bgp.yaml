@@ -1,0 +1,64 @@
+# Cilium BGP control plane - AS-per-cluster (BRKDCN-2982).
+# The kind cluster is one AS (65001). Each node peers its upstream leaf over
+# eBGP (leaf fabric AS 65400) and advertises that node's PodCIDR. The leaf
+# re-originates it into EVPN Type-5 (advertise l2vpn evpn), so pods are reachable
+# fabric-wide. One CiliumBGPClusterConfig per node because each node peers a
+# different leaf address.
+---
+apiVersion: cilium.io/v2
+kind: CiliumBGPAdvertisement
+metadata:
+  name: podcidr
+  labels:
+    advertise: podcidr
+spec:
+  advertisements:
+    - advertisementType: PodCIDR
+---
+apiVersion: cilium.io/v2
+kind: CiliumBGPPeerConfig
+metadata:
+  name: peer-leaf
+spec:
+  families:
+    - afi: ipv4
+      safi: unicast
+      advertisements:
+        matchLabels:
+          advertise: podcidr
+---
+apiVersion: cilium.io/v2
+kind: CiliumBGPClusterConfig
+metadata:
+  name: cp-leaf1
+spec:
+  nodeSelector:
+    matchLabels:
+      kubernetes.io/hostname: cilium-control-plane
+  bgpInstances:
+    - name: "as65001"
+      localASN: 65001
+      peers:
+        - name: leaf1
+          peerASN: 65400
+          peerAddress: 10.2.1.1
+          peerConfigRef:
+            name: peer-leaf
+---
+apiVersion: cilium.io/v2
+kind: CiliumBGPClusterConfig
+metadata:
+  name: worker-leaf2
+spec:
+  nodeSelector:
+    matchLabels:
+      kubernetes.io/hostname: cilium-worker
+  bgpInstances:
+    - name: "as65001"
+      localASN: 65001
+      peers:
+        - name: leaf2
+          peerASN: 65400
+          peerAddress: 10.2.2.1
+          peerConfigRef:
+            name: peer-leaf
