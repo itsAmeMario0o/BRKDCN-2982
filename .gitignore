@@ -7,5 +7,6 @@ terraform.tfvars
 # Ansible
 ansible/collections/
 ansible/.rendered/
+ansible/inventory.operator.yml
 # Python venvs
 **/.venv/
