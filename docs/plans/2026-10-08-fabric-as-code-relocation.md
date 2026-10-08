@@ -6,17 +6,17 @@
 
 **Architecture:** This repo gains `terraform/`, `ansible/`, `cilium/` beside `gitops/`. The six device endpoints become a `switch_urls` map variable injected into the `nac-nxos` module's inline `model` input; the committed data model carries no `url:`. The operational repo keeps substrate (`setup-node-peering.sh`, topology, scripts) and supplies the real endpoints (gitignored `terraform.tfvars`) and credentials (env), running this automation from a sibling checkout.
 
-**Tech Stack:** Terraform (netascode `nac-nxos` ~> 0.3.0), Ansible (`cisco.nxos` over httpapi), kubectl/Cilium. Two git repos: this one (public `itsAmeMario0o/BRKDCN-2982`) and the operational `cml-azure-lab`.
+**Tech Stack:** Terraform (netascode `nac-nxos` ~> 0.3.0), Ansible (`cisco.nxos` over httpapi), kubectl/Cilium. Two git repos: this one (public `itsAmeMario0o/BRKDCN-2982`) and the operational substrate repo (`$OPS_REPO`).
 
 ## Global Constraints
 
-- Public repo: no secrets, no real reachable endpoints, no CML/Azure/lab-specific names. Example/placeholder values only.
+- Public repo: no secrets, no real reachable endpoints, no lab-identifying names. Example/placeholder values only.
 - Single endpoint source: the six URLs come only from `switch_urls` (Terraform) and inventory `ansible_host` (Ansible). The committed data model has no `url:`.
 - Credentials from env only: `NXOS_USERNAME`/`NXOS_PASSWORD` (Terraform module provider) and the Ansible httpapi password. Never a file.
 - Delete, don't relocate, the `*.forward.*` twins.
 - Gitignored, regenerate, do not commit: real `terraform.tfvars`, `*.tfstate*`, `.terraform/`, `ansible/collections/`, `ansible/.rendered/`, any venv.
 - No history rewrite. Files are added here and removed from the operational repo.
-- Source paths below are under `cml-azure-lab/labs/cilium-evpn-fabric/nac/` (abbreviated `NAC/`).
+- Source paths below (abbreviated `NAC/`) are the `nac/` fabric-as-code directory in the operational repo.
 
 ---
 
@@ -253,7 +253,7 @@ git commit -m "feat: relocate cilium/bgp.yaml; add .gitignore and README for the
 
 ### Task 4: Operational repo — remove relocated sources, rewire to the sibling
 
-**Files (in `cml-azure-lab`):**
+**Files (in the operational repo, `$OPS_REPO`):**
 - Remove: `labs/cilium-evpn-fabric/nac/terraform/`, `labs/cilium-evpn-fabric/nac/ansible/`, `labs/cilium-evpn-fabric/nac/cilium/bgp.yaml`
 - Modify: `labs/cilium-evpn-fabric/nac/cilium/setup-node-peering.sh`
 - Create: `labs/cilium-evpn-fabric/nac/README.md` pointer (replace the old one's body)
@@ -264,7 +264,7 @@ git commit -m "feat: relocate cilium/bgp.yaml; add .gitignore and README for the
 - [ ] **Step 1: Remove the relocated sources (operational repo)**
 
 ```bash
-cd <cml-azure-lab>
+cd "$OPS_REPO"
 git rm -r labs/cilium-evpn-fabric/nac/terraform labs/cilium-evpn-fabric/nac/ansible
 git rm labs/cilium-evpn-fabric/nac/cilium/bgp.yaml
 ```
@@ -300,7 +300,7 @@ Run the fabric from the sibling checkout:
 - [ ] **Step 4: Keep the operator's real values on this side (gitignored)**
 
 The real `terraform.tfvars` (real `switch_urls`) and the real Ansible inventory
-live under the operator's control and are gitignored. Confirm `cml-azure-lab`'s
+live under the operator's control and are gitignored. Confirm the operational repo's
 `.gitignore` still covers `*.tfvars` (it does) and add an ignore for the operator
 inventory if it is kept in-repo. No real endpoints are committed.
 
@@ -340,7 +340,7 @@ Expected: no unexpected `changed` tasks (idempotent against the running overlay)
 - [ ] **Step 3: pyATS still validates the running fabric**
 
 ```bash
-cd <cml-azure-lab> && scripts/80-verify-lab.sh cilium-evpn
+cd "$OPS_REPO" && scripts/80-verify-lab.sh cilium-evpn
 ```
 Expected: all testcases pass. (Needs the pyATS console on port 22; if that NSG rule is not open, record it as the one known gap, as in the GitOps slice.)
 
