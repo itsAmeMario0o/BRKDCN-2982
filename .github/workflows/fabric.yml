@@ -1,0 +1,64 @@
+name: fabric
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'terraform/**'
+      - 'ansible/**'
+  workflow_dispatch:
+
+# Never run two applies against the same fabric at once; do not cancel a
+# mid-apply run.
+concurrency:
+  group: fabric-apply
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: [self-hosted]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bring up fabric access
+        # Operator-provided hook, kept out of this public repo: points at the
+        # operator's script that opens the SSH forwards to the switches. No-op
+        # if unset (the fabric is assumed already reachable).
+        run: |
+          if [ -n "${FABRIC_ACCESS_SCRIPT:-}" ] && [ -x "${FABRIC_ACCESS_SCRIPT}" ]; then
+            "${FABRIC_ACCESS_SCRIPT}"
+          else
+            echo "FABRIC_ACCESS_SCRIPT not set; assuming the fabric is already reachable"
+          fi
+
+      - name: Terraform apply (underlay)
+        working-directory: terraform
+        # switch_urls from the gitignored terraform.tfvars; NXOS_USERNAME /
+        # NXOS_PASSWORD from the runner environment. No GitHub secrets.
+        run: |
+          terraform init -input=false
+          terraform plan -input=false -out tfplan
+          terraform apply -input=false tfplan
+
+      - name: Ansible overlay
+        working-directory: ansible
+        run: |
+          : "${FABRIC_INVENTORY:?set FABRIC_INVENTORY to the operator inventory path}"
+          ansible-playbook -i "${FABRIC_INVENTORY}" overlay.yml
+
+      - name: pyATS verify (reachable-or-skip)
+        # Fails the build if the fabric is wrong. Skips cleanly (does not fail
+        # the apply) when the console is unreachable, so the known console gate
+        # does not turn every run red for the wrong reason.
+        run: |
+          if [ -z "${FABRIC_VERIFY_SCRIPT:-}" ]; then
+            echo "verify skipped: FABRIC_VERIFY_SCRIPT not set"; exit 0
+          fi
+          probe="${FABRIC_CONSOLE_HOSTPORT:-}"
+          if [ -n "$probe" ]; then
+            host="${probe%:*}"; port="${probe##*:}"
+            if ! nc -z -w5 "$host" "$port" 2>/dev/null; then
+              echo "verify skipped: console unreachable at ${probe}"; exit 0
+            fi
+          fi
+          "${FABRIC_VERIFY_SCRIPT}"
