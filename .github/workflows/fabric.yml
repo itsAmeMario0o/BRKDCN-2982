@@ -33,9 +33,12 @@ jobs:
 
       - name: Terraform apply (underlay)
         working-directory: terraform
-        # switch_urls from the gitignored terraform.tfvars; NXOS_USERNAME /
-        # NXOS_PASSWORD from the runner environment. No GitHub secrets.
+        # switch_urls come from the operator's tfvars, which lives outside this
+        # fresh checkout and is copied in via FABRIC_TFVARS. Credentials come from
+        # NXOS_USERNAME / NXOS_PASSWORD in the runner environment. No GitHub secrets.
         run: |
+          : "${FABRIC_TFVARS:?set FABRIC_TFVARS to the operator's switch_urls tfvars}"
+          cp "${FABRIC_TFVARS}" terraform.tfvars
           terraform init -input=false
           terraform plan -input=false -out tfplan
           terraform apply -input=false tfplan
