@@ -39,8 +39,9 @@ password is already environment-only. So:
   `switch_urls`, auto-loaded by Terraform) and their own inventory passed with
   `-i`. The old on-net/forwarded `*.forward.*` twins are dropped: on-net vs
   SSH-forwarded is just different values the operator supplies.
-- Credentials come from the environment: `TF_VAR_switch_password` for Terraform
-  and the httpapi password for Ansible. Never a file.
+- Credentials come from the environment: `NXOS_USERNAME`/`NXOS_PASSWORD` (read by
+  the `nac-nxos` module's provider) for Terraform, and the httpapi password for
+  Ansible. Never a file.
 
 This adds one small Terraform variable (`switch_urls`) and a merge in `main.tf`;
 everything else reuses each tool's native override (Terraform's auto-loaded
@@ -71,7 +72,8 @@ path variable (for example `FABRIC_REPO=../BRKDCN-2982`) and runs the automation
 against it, supplying the real endpoints and credentials it holds:
 
 ```
-terraform -chdir="$FABRIC_REPO/terraform" apply       # with the gitignored tfvars + TF_VAR_switch_password
+export NXOS_USERNAME=admin NXOS_PASSWORD=...            # creds from the env, never a file
+terraform -chdir="$FABRIC_REPO/terraform" apply        # switch_urls from the gitignored terraform.tfvars
 ansible-playbook -i <operator inventory> "$FABRIC_REPO/ansible/overlay.yml"
 ```
 
