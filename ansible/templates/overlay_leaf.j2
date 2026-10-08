@@ -1,0 +1,84 @@
+{# Leaf overlay (single-AS 65400, BRKDCN-2982 model): VRF + L3 VNI, local L2
+   segments with anycast gateways, NVE, EVPN, host ports, the iBGP l2vpn evpn
+   sessions to the spine route-reflectors, and - if this leaf has a Cilium node -
+   the eBGP host peering in the tenant VRF. No allowas-in: it is all one AS. #}
+nv overlay evpn
+feature bgp
+feature nv overlay
+feature vn-segment-vlan-based
+feature interface-vlan
+fabric forwarding anycast-gateway-mac {{ overlay.anycast_gw_mac }}
+route-map RM-REDIST-DIRECT permit 10
+vlan {{ overlay.vrf.l3vni_vlan }}
+  vn-segment {{ overlay.vrf.l3vni }}
+{% for s in overlay.l2vni if s.name in l2vni_local %}
+vlan {{ s.vlan }}
+  vn-segment {{ s.vni }}
+{% endfor %}
+vrf context {{ overlay.vrf.name }}
+  vni {{ overlay.vrf.l3vni }}
+  rd auto
+  address-family ipv4 unicast
+    route-target both auto
+    route-target both auto evpn
+interface Vlan{{ overlay.vrf.l3vni_vlan }}
+  no shutdown
+  vrf member {{ overlay.vrf.name }}
+  ip forward
+{% for s in overlay.l2vni if s.name in l2vni_local %}
+interface Vlan{{ s.vlan }}
+  no shutdown
+  vrf member {{ overlay.vrf.name }}
+  ip address {{ s.svi_ip }}
+  fabric forwarding mode anycast-gateway
+{% endfor %}
+{% if node_peer is defined %}
+interface {{ node_peer.port }}
+  no switchport
+  vrf member {{ overlay.vrf.name }}
+  ip address {{ node_peer.local_ip }}
+  no shutdown
+{% endif %}
+interface nve1
+  no shutdown
+  host-reachability protocol bgp
+  source-interface loopback1
+  member vni {{ overlay.vrf.l3vni }} associate-vrf
+{% for s in overlay.l2vni if s.name in l2vni_local %}
+  member vni {{ s.vni }}
+    ingress-replication protocol bgp
+{% endfor %}
+evpn
+{% for s in overlay.l2vni if s.name in l2vni_local %}
+  vni {{ s.vni }} l2
+    rd auto
+    route-target import auto
+    route-target export auto
+{% endfor %}
+{% for hp in host_ports %}
+interface {{ hp.port }}
+  switchport
+  switchport mode access
+  switchport access vlan {{ hp.vlan }}
+  no shutdown
+{% endfor %}
+router bgp {{ bgp.asn_fabric }}
+{% for name, ip in bgp.spine_loopbacks.items() %}
+  neighbor {{ ip }}
+    remote-as {{ bgp.asn_fabric }}
+    update-source loopback0
+    address-family l2vpn evpn
+      send-community
+      send-community extended
+{% endfor %}
+  vrf {{ overlay.vrf.name }}
+    address-family ipv4 unicast
+      advertise l2vpn evpn
+      redistribute direct route-map RM-REDIST-DIRECT
+      maximum-paths 8
+{% if node_peer is defined %}
+    neighbor {{ node_peer.peer_ip }}
+      remote-as {{ bgp.asn_cluster }}
+      description cilium-node
+      address-family ipv4 unicast
+{% endif %}

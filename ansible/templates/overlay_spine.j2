@@ -1,0 +1,21 @@
+{# Spine overlay: EVPN route-reflector (single-AS 65400, BRKDCN-2982 model).
+   No NVE, no VRF, no VNI. iBGP l2vpn evpn to every leaf loopback0, with the
+   spine as route-reflector-client for the leaves. iBGP preserves the originating
+   leaf's VTEP next-hop automatically, so no next-hop route-map and no
+   disable-peer-as-check are needed. retain route-target all so the spine keeps
+   and reflects every tenant's EVPN routes without hosting the VRFs. #}
+nv overlay evpn
+feature bgp
+feature nv overlay
+router bgp {{ bgp.asn_fabric }}
+  address-family l2vpn evpn
+    retain route-target all
+{% for name, ip in bgp.leaf_loopbacks.items() %}
+  neighbor {{ ip }}
+    remote-as {{ bgp.asn_fabric }}
+    update-source loopback0
+    address-family l2vpn evpn
+      send-community
+      send-community extended
+      route-reflector-client
+{% endfor %}

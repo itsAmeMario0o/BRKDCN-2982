@@ -1,0 +1,9 @@
+# leaf2 serves blue; the worker kind node attaches on Ethernet1/6 and peers
+# eBGP (cluster AS 65001) into tenant1.
+l2vni_local: [blue]
+host_ports:
+  - {port: Ethernet1/7, vlan: 200}
+node_peer:
+  port: Ethernet1/6
+  local_ip: 10.2.2.1/30
+  peer_ip: 10.2.2.2

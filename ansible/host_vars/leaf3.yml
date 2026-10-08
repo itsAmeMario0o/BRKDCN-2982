@@ -1,0 +1,5 @@
+# leaf3: full EVPN participant, no local endpoints yet. Carries both segments as
+# distributed anycast so a red or blue host can plug into it later. The kind-host
+# is on Ethernet1/6 (handled in the Cilium slice, not here).
+l2vni_local: [red, blue]
+host_ports: []

@@ -1,0 +1,50 @@
+# Build the l2vpn evpn + VXLAN overlay on the fabric, device-direct (no NDFC).
+# Spines are configured as EVPN route-servers; leaf1 and leaf2 get the tenant
+# VRF, their local L2 segment, anycast gateway, NVE, and the overlay BGP
+# sessions. Run after the Terraform underlay is up.
+#
+#   export NXOS_USERNAME=admin NXOS_PASSWORD=...
+#   ansible-playbook -i <your inventory> overlay.yml
+
+- name: EVPN overlay - spine route-servers
+  hosts: spines
+  gather_facts: false
+  tasks:
+    - name: Render spine overlay from the data model
+      ansible.builtin.template:
+        src: templates/overlay_spine.j2
+        dest: ".rendered/{{ inventory_hostname }}.cfg"
+      delegate_to: localhost
+      check_mode: false
+
+    - name: Push spine overlay
+      cisco.nxos.nxos_config:
+        src: ".rendered/{{ inventory_hostname }}.cfg"
+      register: spine_cfg
+
+    - name: Show what changed on the spine
+      ansible.builtin.debug:
+        var: spine_cfg.commands
+
+- name: EVPN overlay - leaves (symmetric IRB)
+  hosts: leaves
+  gather_facts: false
+  tasks:
+    - name: Render leaf overlay from the data model
+      ansible.builtin.template:
+        src: templates/overlay_leaf.j2
+        dest: ".rendered/{{ inventory_hostname }}.cfg"
+      delegate_to: localhost
+      check_mode: false
+      when: l2vni_local is defined
+
+    - name: Push leaf overlay
+      cisco.nxos.nxos_config:
+        src: ".rendered/{{ inventory_hostname }}.cfg"
+      register: leaf_cfg
+      when: l2vni_local is defined
+
+    - name: Show what changed on the leaf
+      ansible.builtin.debug:
+        var: leaf_cfg.commands
+      when: l2vni_local is defined

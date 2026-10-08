@@ -1,0 +1,34 @@
+# Overlay data model for the Cilium EVPN fabric (single-AS, BRKDCN-2982 model).
+#
+# The fabric is one AS (65400): the Terraform underlay runs iBGP with the spines
+# as route-reflectors. This model adds the l2vpn evpn overlay (iBGP, spines as
+# EVPN route-reflectors) and the Cilium host peering (AS-per-cluster: the K8s
+# cluster is its own AS, 65001, peering the leaves over eBGP into tenant1).
+#
+# Symmetric IRB: tenant VRF with an L3 VNI, two L2 segments (red, blue),
+# distributed anycast gateways. Templates in templates/ render this to NX-OS.
+
+overlay:
+  anycast_gw_mac: "0000.0000.1234"
+  vrf:
+    name: tenant1
+    l3vni: 50000
+    l3vni_vlan: 2001
+  l2vni:
+    - {name: red,  vlan: 100, vni: 10100, svi_ip: "10.0.100.1/24"}
+    - {name: blue, vlan: 200, vni: 10200, svi_ip: "10.0.200.1/24"}
+
+# One AS for the whole fabric (65400); the Kubernetes/Cilium cluster is its own
+# AS (65001) per BRKDCN-2982 "AS-per-cluster". Overlay EVPN is iBGP, loopback to
+# loopback, with the spines as route-reflectors.
+bgp:
+  asn_fabric: 65400
+  asn_cluster: 65001
+  spine_loopbacks:
+    spine1: "10.0.0.1"
+    spine2: "10.0.0.2"
+  leaf_loopbacks:
+    leaf1: "10.0.0.11"
+    leaf2: "10.0.0.12"
+    leaf3: "10.0.0.13"
+    leaf4: "10.0.0.14"

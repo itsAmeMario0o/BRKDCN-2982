@@ -1,0 +1,9 @@
+# leaf1 serves red; the control-plane kind node attaches on Ethernet1/6 and
+# peers eBGP (cluster AS 65001) into tenant1.
+l2vni_local: [red]
+host_ports:
+  - {port: Ethernet1/7, vlan: 100}
+node_peer:
+  port: Ethernet1/6
+  local_ip: 10.2.1.1/30
+  peer_ip: 10.2.1.2
