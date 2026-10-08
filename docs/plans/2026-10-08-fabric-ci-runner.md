@@ -11,12 +11,13 @@
 ## Global Constraints
 
 - Public repo: no secrets, no credentials, no real endpoints, no lab-identifying names. Operator specifics come from runner environment variables.
-- No GitHub Actions secrets are defined; the runner reads `NXOS_USERNAME`/`NXOS_PASSWORD` and the gitignored `terraform.tfvars` from its own environment.
+- No GitHub Actions secrets are defined; the runner reads `NXOS_USERNAME`/`NXOS_PASSWORD` from its environment and the operator's `switch_urls` tfvars via `FABRIC_TFVARS` (the fresh checkout has no gitignored tfvars).
 - Trigger only on `push` to `main` + `workflow_dispatch`; never `pull_request`.
 - Auto-apply with `concurrency` = 1; pyATS fails the build loudly, or skips cleanly when the console is unreachable.
 - Runner label: `self-hosted`. Runner lives on the operator's workstation, persistent.
 - Operator environment contract (set on the runner, never committed):
-  `NXOS_USERNAME`, `NXOS_PASSWORD`; `terraform.tfvars` present in `terraform/`;
+  `NXOS_USERNAME`, `NXOS_PASSWORD`; `FABRIC_TFVARS` (path to the operator's
+  `switch_urls` tfvars, copied into the checkout before apply);
   `FABRIC_INVENTORY` (path to the Ansible inventory); optional `FABRIC_ACCESS_SCRIPT`
   (brings up the SSH forwards), `FABRIC_VERIFY_SCRIPT` (pyATS verify), and
   `FABRIC_CONSOLE_HOSTPORT` (host:port the verify guard probes).
@@ -69,9 +70,12 @@ jobs:
 
       - name: Terraform apply (underlay)
         working-directory: terraform
-        # switch_urls from the gitignored terraform.tfvars; NXOS_USERNAME /
-        # NXOS_PASSWORD from the runner environment. No GitHub secrets.
+        # switch_urls come from the operator's tfvars, which lives outside this
+        # fresh checkout and is copied in via FABRIC_TFVARS. Credentials come from
+        # NXOS_USERNAME / NXOS_PASSWORD in the runner environment. No GitHub secrets.
         run: |
+          : "${FABRIC_TFVARS:?set FABRIC_TFVARS to the operator's switch_urls tfvars}"
+          cp "${FABRIC_TFVARS}" terraform.tfvars
           terraform init -input=false
           terraform plan -input=false -out tfplan
           terraform apply -input=false tfplan
