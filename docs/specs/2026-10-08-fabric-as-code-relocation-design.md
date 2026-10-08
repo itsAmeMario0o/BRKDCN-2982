@@ -26,9 +26,12 @@ Only six values are environment-specific: the device management endpoints. The
 password is already environment-only. So:
 
 - The six endpoints have a **single source**, each via its tool's native
-  override. Terraform: they come only from the `switch_urls` variable; the
-  committed data model carries no inline `url:`, so it is purely the reference
-  design. Ansible: they are the `ansible_host` fields of an inventory.
+  override. Terraform: this relocation adds a `switch_urls` map variable (device
+  name to URL); `main.tf` reads the committed reference data model, injects each
+  device's URL from the variable, and passes the result to the `nac-nxos`
+  module's inline `model` input. The committed data model carries no `url:`, so
+  it is purely the reference design, and no files are generated. Ansible: the
+  endpoints are the `ansible_host` fields of an inventory.
 - This repo commits **one example of each, not per-environment variants**:
   `terraform.tfvars.example`, and a committed `inventory.yml` whose hosts are
   placeholders (`spine1.fabric.example`, ...) that doubles as the reference. The
@@ -39,9 +42,12 @@ password is already environment-only. So:
 - Credentials come from the environment: `TF_VAR_switch_password` for Terraform
   and the httpapi password for Ansible. Never a file.
 
-This reuses each tool's native override (Terraform's auto-loaded `terraform.tfvars`,
-Ansible's `-i`), not a new mechanism, and deletes the duplicated variants rather
-than relocating them.
+This adds one small Terraform variable (`switch_urls`) and a merge in `main.tf`;
+everything else reuses each tool's native override (Terraform's auto-loaded
+`terraform.tfvars`, Ansible's `-i`), and deletes the duplicated `*.forward.*`
+variants rather than relocating them. The old `terraform.tfvars.example` already
+documents a `switch_urls` block that was never implemented; this relocation makes
+that variable real and corrects the example.
 
 ## Layout here after the move
 
@@ -77,11 +83,13 @@ ansible-playbook -i <operator inventory> "$FABRIC_REPO/ansible/overlay.yml"
 One coordinated change across both repos:
 
 1. Copy the `terraform/`, `ansible/`, and `cilium/bgp.yaml` sources into this
-   repo. Drop the `*.forward.*` twins. Strip inline `url:` from the data model (it
-   comes from `switch_urls`) and set the committed `inventory.yml` hosts to
-   placeholders. Keep `terraform.tfvars.example`. Extend `.gitignore` here for the
-   real `terraform.tfvars`, collections, venv, state, and `.rendered/` — there is
-   no gitignored real inventory in the repo, the operator passes theirs with `-i`.
+   repo. Drop the `*.forward.*` twins. Add the `switch_urls` variable and the
+   `model`-merge in `main.tf`, strip inline `url:` from the committed data model,
+   and correct `terraform.tfvars.example` to the now-real `switch_urls`. Set the
+   committed `inventory.yml` hosts to placeholders. Extend `.gitignore` here for
+   the real `terraform.tfvars`, collections, venv, state, and `.rendered/` — there
+   is no gitignored real inventory in the repo, the operator passes theirs with
+   `-i`.
 2. In the operational repo, remove the relocated sources and leave a
    sibling-path pointer plus the gitignored real endpoint files; update the
    bring-up scripts and `setup-node-peering.sh` to run the automation from
