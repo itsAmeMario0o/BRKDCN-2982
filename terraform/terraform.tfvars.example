@@ -1,0 +1,17 @@
+# Copy to terraform.tfvars (gitignored) and fill in the real NX-API endpoints.
+# Credentials are NOT here; export them:
+#   export NXOS_USERNAME=admin NXOS_PASSWORD="$LAB_PASSWORD"
+#
+# switch_urls values are placeholders. In-lab, point them at the switch
+# management addresses; from a workstation, at SSH-forwarded localhost ports.
+
+switch_urls = {
+  spine1 = "https://spine1.fabric.example"
+  spine2 = "https://spine2.fabric.example"
+  leaf1  = "https://leaf1.fabric.example"
+  leaf2  = "https://leaf2.fabric.example"
+  leaf3  = "https://leaf3.fabric.example"
+  leaf4  = "https://leaf4.fabric.example"
+}
+
+# managed_devices = ["leaf1"]   # narrow the apply to stage one switch first

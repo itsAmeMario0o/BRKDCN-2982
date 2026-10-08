@@ -1,0 +1,333 @@
+# NX-OS single-AS (65400) iBGP underlay for the cilium-evpn fabric.
+# Design: BRKDCN-2982 single-AS model. iBGP ipv4 over the P2P links, spines as
+# route-reflectors. Leaves advertise their loopbacks; the SPINES also advertise
+# their connected P2P /31s so a leaf can resolve another leaf's loopback next
+# hop (the reflected loopback keeps the originating leaf's P2P next hop, and
+# next-hop-self is ignored on reflected routes - so we make the transit links
+# routable instead). No eBGP knobs. Overlay (l2vpn evpn, iBGP RR) and the
+# Cilium eBGP host peering are Ansible's job. Schema: netascode nac-nxos v0.3.x.
+---
+nxos:
+  devices:
+    - name: spine1
+      configuration:
+        feature:
+          bgp: true
+        interfaces:
+          loopbacks:
+          - id: 0
+            ip:
+              address: 10.0.0.1/32
+          ethernets:
+          - id: 1/1
+            shutdown: false
+            switchport:
+              enabled: false   # Layer3 (no switchport)
+            ip:
+              address: 10.1.1.0/31
+          - id: 1/2
+            shutdown: false
+            switchport:
+              enabled: false   # Layer3 (no switchport)
+            ip:
+              address: 10.1.1.2/31
+          - id: 1/3
+            shutdown: false
+            switchport:
+              enabled: false   # Layer3 (no switchport)
+            ip:
+              address: 10.1.1.4/31
+          - id: 1/4
+            shutdown: false
+            switchport:
+              enabled: false   # Layer3 (no switchport)
+            ip:
+              address: 10.1.1.6/31
+        routing:
+          bgp:
+            asn: "65400"
+            router_id: 10.0.0.1
+            address_families:
+            - address_family: ipv4-unicast
+              networks:
+              - prefix: 10.0.0.1/32
+              - prefix: 10.1.1.0/31
+              - prefix: 10.1.1.2/31
+              - prefix: 10.1.1.4/31
+              - prefix: 10.1.1.6/31
+            neighbors:
+            - ip: 10.1.1.1
+              remote_as: "65400"
+              description: leaf1
+              address_families:
+              - address_family: ipv4-unicast
+                route_reflector_client: true
+            - ip: 10.1.1.3
+              remote_as: "65400"
+              description: leaf2
+              address_families:
+              - address_family: ipv4-unicast
+                route_reflector_client: true
+            - ip: 10.1.1.5
+              remote_as: "65400"
+              description: leaf3
+              address_families:
+              - address_family: ipv4-unicast
+                route_reflector_client: true
+            - ip: 10.1.1.7
+              remote_as: "65400"
+              description: leaf4
+              address_families:
+              - address_family: ipv4-unicast
+                route_reflector_client: true
+    - name: spine2
+      configuration:
+        feature:
+          bgp: true
+        interfaces:
+          loopbacks:
+          - id: 0
+            ip:
+              address: 10.0.0.2/32
+          ethernets:
+          - id: 1/1
+            shutdown: false
+            switchport:
+              enabled: false   # Layer3 (no switchport)
+            ip:
+              address: 10.1.2.0/31
+          - id: 1/2
+            shutdown: false
+            switchport:
+              enabled: false   # Layer3 (no switchport)
+            ip:
+              address: 10.1.2.2/31
+          - id: 1/3
+            shutdown: false
+            switchport:
+              enabled: false   # Layer3 (no switchport)
+            ip:
+              address: 10.1.2.4/31
+          - id: 1/4
+            shutdown: false
+            switchport:
+              enabled: false   # Layer3 (no switchport)
+            ip:
+              address: 10.1.2.6/31
+        routing:
+          bgp:
+            asn: "65400"
+            router_id: 10.0.0.2
+            address_families:
+            - address_family: ipv4-unicast
+              networks:
+              - prefix: 10.0.0.2/32
+              - prefix: 10.1.2.0/31
+              - prefix: 10.1.2.2/31
+              - prefix: 10.1.2.4/31
+              - prefix: 10.1.2.6/31
+            neighbors:
+            - ip: 10.1.2.1
+              remote_as: "65400"
+              description: leaf1
+              address_families:
+              - address_family: ipv4-unicast
+                route_reflector_client: true
+            - ip: 10.1.2.3
+              remote_as: "65400"
+              description: leaf2
+              address_families:
+              - address_family: ipv4-unicast
+                route_reflector_client: true
+            - ip: 10.1.2.5
+              remote_as: "65400"
+              description: leaf3
+              address_families:
+              - address_family: ipv4-unicast
+                route_reflector_client: true
+            - ip: 10.1.2.7
+              remote_as: "65400"
+              description: leaf4
+              address_families:
+              - address_family: ipv4-unicast
+                route_reflector_client: true
+    - name: leaf1
+      configuration:
+        feature:
+          bgp: true
+        interfaces:
+          loopbacks:
+          - id: 0
+            ip:
+              address: 10.0.0.11/32
+          - id: 1
+            ip:
+              address: 10.0.1.11/32
+          ethernets:
+          - id: 1/1
+            shutdown: false
+            switchport:
+              enabled: false   # Layer3 (no switchport)
+            ip:
+              address: 10.1.1.1/31
+          - id: 1/2
+            shutdown: false
+            switchport:
+              enabled: false   # Layer3 (no switchport)
+            ip:
+              address: 10.1.2.1/31
+        routing:
+          bgp:
+            asn: "65400"
+            router_id: 10.0.0.11
+            address_families:
+            - address_family: ipv4-unicast
+              networks:
+              - prefix: 10.0.0.11/32
+              - prefix: 10.0.1.11/32
+            neighbors:
+            - ip: 10.1.1.0
+              remote_as: "65400"
+              description: spine1
+              address_families:
+              - address_family: ipv4-unicast
+            - ip: 10.1.2.0
+              remote_as: "65400"
+              description: spine2
+              address_families:
+              - address_family: ipv4-unicast
+    - name: leaf2
+      configuration:
+        feature:
+          bgp: true
+        interfaces:
+          loopbacks:
+          - id: 0
+            ip:
+              address: 10.0.0.12/32
+          - id: 1
+            ip:
+              address: 10.0.1.12/32
+          ethernets:
+          - id: 1/1
+            shutdown: false
+            switchport:
+              enabled: false   # Layer3 (no switchport)
+            ip:
+              address: 10.1.1.3/31
+          - id: 1/2
+            shutdown: false
+            switchport:
+              enabled: false   # Layer3 (no switchport)
+            ip:
+              address: 10.1.2.3/31
+        routing:
+          bgp:
+            asn: "65400"
+            router_id: 10.0.0.12
+            address_families:
+            - address_family: ipv4-unicast
+              networks:
+              - prefix: 10.0.0.12/32
+              - prefix: 10.0.1.12/32
+            neighbors:
+            - ip: 10.1.1.2
+              remote_as: "65400"
+              description: spine1
+              address_families:
+              - address_family: ipv4-unicast
+            - ip: 10.1.2.2
+              remote_as: "65400"
+              description: spine2
+              address_families:
+              - address_family: ipv4-unicast
+    - name: leaf3
+      configuration:
+        feature:
+          bgp: true
+        interfaces:
+          loopbacks:
+          - id: 0
+            ip:
+              address: 10.0.0.13/32
+          - id: 1
+            ip:
+              address: 10.0.1.13/32
+          ethernets:
+          - id: 1/1
+            shutdown: false
+            switchport:
+              enabled: false   # Layer3 (no switchport)
+            ip:
+              address: 10.1.1.5/31
+          - id: 1/2
+            shutdown: false
+            switchport:
+              enabled: false   # Layer3 (no switchport)
+            ip:
+              address: 10.1.2.5/31
+        routing:
+          bgp:
+            asn: "65400"
+            router_id: 10.0.0.13
+            address_families:
+            - address_family: ipv4-unicast
+              networks:
+              - prefix: 10.0.0.13/32
+              - prefix: 10.0.1.13/32
+            neighbors:
+            - ip: 10.1.1.4
+              remote_as: "65400"
+              description: spine1
+              address_families:
+              - address_family: ipv4-unicast
+            - ip: 10.1.2.4
+              remote_as: "65400"
+              description: spine2
+              address_families:
+              - address_family: ipv4-unicast
+    - name: leaf4
+      configuration:
+        feature:
+          bgp: true
+        interfaces:
+          loopbacks:
+          - id: 0
+            ip:
+              address: 10.0.0.14/32
+          - id: 1
+            ip:
+              address: 10.0.1.14/32
+          ethernets:
+          - id: 1/1
+            shutdown: false
+            switchport:
+              enabled: false   # Layer3 (no switchport)
+            ip:
+              address: 10.1.1.7/31
+          - id: 1/2
+            shutdown: false
+            switchport:
+              enabled: false   # Layer3 (no switchport)
+            ip:
+              address: 10.1.2.7/31
+        routing:
+          bgp:
+            asn: "65400"
+            router_id: 10.0.0.14
+            address_families:
+            - address_family: ipv4-unicast
+              networks:
+              - prefix: 10.0.0.14/32
+              - prefix: 10.0.1.14/32
+            neighbors:
+            - ip: 10.1.1.6
+              remote_as: "65400"
+              description: spine1
+              address_families:
+              - address_family: ipv4-unicast
+            - ip: 10.1.2.6
+              remote_as: "65400"
+              description: spine2
+              address_families:
+              - address_family: ipv4-unicast
