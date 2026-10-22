@@ -39,14 +39,17 @@ The result is a symmetric IRB fabric. One tenant VRF, `tenant1`, with an L3 VNI.
 
 ## The scheme
 
-| Object | Value |
-|---|---|
-| Tenant VRF | `tenant1`, L3 VNI 50000 (VLAN 2001) |
-| Red segment | VLAN 100, L2 VNI 10100, 10.0.100.0/24 |
-| Blue segment | VLAN 200, L2 VNI 10200, 10.0.200.0/24 |
-| Anycast gateway MAC | 0000.0000.1234 |
-| VTEP source | loopback1 (from the underlay) |
-| EVPN | iBGP `l2vpn evpn`, spines as route reflectors |
+| Object | VLAN | VNI | Subnet | Multicast group |
+|---|---|---|---|---|
+| Tenant VRF `tenant1` | 2001 | 50000 (L3) | routed, no subnet | associate-vrf |
+| Red segment | 100 | 10100 (L2) | 10.0.100.0/24 | 239.1.1.100 |
+| Blue segment | 200 | 10200 (L2) | 10.0.200.0/24 | 239.1.1.200 |
+| Node subnet, pair A | 50 | 10050 (L2) | 10.0.50.0/24 | 239.1.1.50 |
+| Node subnet, pair B | 51 | 10051 (L2) | 10.0.51.0/24 | 239.1.1.51 |
+
+Anycast gateway MAC is `0000.0000.1234`, the same fabric-wide. The VTEP sources from loopback1. EVPN runs as iBGP `l2vpn evpn` with the spines as route reflectors.
+
+Each L2 VNI maps to one multicast group in the `239.0.0.0/8` range the underlay reserved for the rendezvous point. The L3 VNI needs no group. It is a routed transit segment between VTEPs and carries no broadcast. The node subnets, VLANs 50 and 51, are where the Kubernetes nodes attach. The [Cilium BGP]({{ '/cilium-bgp/' | relative_url }}) page builds on them.
 
 ## How a packet crosses the fabric
 
@@ -187,7 +190,7 @@ The L3 VNI SVI carries no IP address. It is the routing anchor for the tenant VR
 
 ### 4. The VTEP and the EVPN instances
 
-The NVE interface sources from loopback1 and carries the L3 VNI plus the two L2 VNIs. BGP handles host reachability, so each L2 VNI floods broadcast traffic with ingress replication rather than multicast.
+The NVE interface sources from loopback1 and carries the L3 VNI plus the L2 VNIs. BGP still handles host and MAC reachability. Broadcast traffic rides the multicast tree the underlay built, so each L2 VNI binds to a `mcast-group` rather than listing every remote VTEP for head-end replication.
 
 ```nxos
 ! leaf
@@ -197,9 +200,13 @@ interface nve1
   source-interface loopback1
   member vni 50000 associate-vrf
   member vni 10100
-    ingress-replication protocol bgp
+    mcast-group 239.1.1.100          ! red
   member vni 10200
-    ingress-replication protocol bgp
+    mcast-group 239.1.1.200          ! blue
+  member vni 10050
+    mcast-group 239.1.1.50           ! node subnet, pair A
+  member vni 10051
+    mcast-group 239.1.1.51           ! node subnet, pair B
 
 evpn
   vni 10100 l2
@@ -210,7 +217,17 @@ evpn
     rd auto
     route-target import auto
     route-target export auto
+  vni 10050 l2
+    rd auto
+    route-target import auto
+    route-target export auto
+  vni 10051 l2
+    rd auto
+    route-target import auto
+    route-target export auto
 ```
+
+The L3 VNI keeps `associate-vrf` and binds to no group. Only the L2 VNIs carry broadcast, so only they need a multicast group. Each leaf binds the same VNI to the same group, which is how their trees line up at the rendezvous point.
 
 ### 5. Leaf BGP: EVPN to the spines, advertise the tenant
 
@@ -282,7 +299,7 @@ Two details make this correct. The shared VIP must be reachable in the underlay,
 ```nxos
 show bgp l2vpn evpn summary     ! EVPN sessions to both spines, established
 show nve peers                  ! VTEP to VTEP, each leaf sees the others
-show nve vni                    ! the two L2 VNIs and the L3 VNI, up
+show nve vni                    ! the L2 VNIs with their mcast groups, and the L3 VNI, up
 show vpc brief                  ! peer adjacency and consistency, the vPC up
 ```
 
