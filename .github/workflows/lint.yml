@@ -1,0 +1,49 @@
+name: Lint
+
+# Static checks for the repo: YAML style, Kubernetes manifest validity, the
+# Dockerfile, and shell scripts. The Jekyll site build runs in pages.yaml, and
+# the fabric apply runs in fabric.yml, so this workflow stays focused on linting.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  yaml:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: yamllint
+        run: pipx run yamllint -c .yamllint .
+
+  manifests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: kubeconform
+        run: |
+          VERSION=v0.6.7
+          curl -sSL "https://github.com/yannh/kubeconform/releases/download/${VERSION}/kubeconform-linux-amd64.tar.gz" \
+            | tar -xz -C /tmp kubeconform
+          # CRDs (Cilium, Argo CD) have no public schema, so skip missing schemas
+          # rather than fail. Standard Kubernetes kinds are validated.
+          /tmp/kubeconform -summary -strict -ignore-missing-schemas \
+            -kubernetes-version 1.31.0 \
+            use-cases gitops cilium
+
+  dockerfile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: use-cases/01-network-policies/app/Dockerfile
+
+  shell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ludeeus/action-shellcheck@2.0.0

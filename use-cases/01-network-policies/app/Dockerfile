@@ -1,8 +1,6 @@
 FROM python:3.12-slim
-# curl is here only so the demo's kubectl exec probes read cleanly.
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl \
-    && rm -rf /var/lib/apt/lists/*
+# The app uses the Python standard library only, so it installs no packages.
+# The demo's probes call the app's /check endpoint, not curl.
 WORKDIR /app
 COPY app.py .
 COPY static ./static

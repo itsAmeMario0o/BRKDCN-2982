@@ -1,0 +1,19 @@
+# Lenient yamllint config. The manifests and Jekyll config favor readability
+# over strict formatting, so this disables the noisy stylistic rules and keeps
+# the ones that catch real errors (syntax, duplicate keys, bad indentation).
+extends: relaxed
+
+rules:
+  line-length: disable
+  document-start: disable
+  truthy: disable
+  trailing-spaces: disable
+  comments:
+    min-spaces-from-content: 1
+  comments-indentation: disable
+
+ignore: |
+  _site/
+  vendor/
+  .bundle/
+  site/_site/

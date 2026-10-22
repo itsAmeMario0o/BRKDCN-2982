@@ -11,7 +11,7 @@ summary: Two delivery lanes, both starting from this repo. Argo CD pulls the clu
 This repository is the source of truth for the fabric-as-code and its pipeline. Two separate lanes keep the running environment matching the repo, because the two halves of the lab reconcile in different ways.
 
 - **The cluster lane is pull-based.** Kubernetes is declarative and can pull, so Argo CD runs inside the cluster and reconciles the manifests from this repo.
-- **The fabric lane is push-based.** The Nexus switches cannot run an in-cluster agent, so a CI runner applies Terraform and Ansible against them when the fabric-as-code changes.
+- **The fabric lane is push-based.** The Nexus switches cannot run an in-cluster agent, so a continuous integration (CI) runner applies Terraform and Ansible against them when the fabric-as-code changes.
 
 ## Cluster lane: Argo CD
 
@@ -19,9 +19,9 @@ Argo CD runs inside the cluster and reconciles Kubernetes manifests from this re
 
 The structure is the app-of-apps pattern: one root Application points at `gitops/apps/`, and each workload is a folder under it. There is one workload today, a demo app. The pipeline grows by adding a folder under `gitops/apps/`, with no controller reconfiguration per workload.
 
-The manifests and the bootstrap live in `gitops/`, but Argo CD is not yet deployed on this cluster. The demo app is applied by hand today, the same as the fabric. The commands below are the intended bootstrap, not a step that is already running here.
+Argo CD runs on this cluster now. The `root` Application reports `Synced` and `Healthy`, and it reconciles the sample workload into the `gitops-demo` namespace. Self-heal stays on, so a manual change to a managed resource, such as scaling the deployment by hand, reverts on the next sync.
 
-Bootstrap it from the cluster host (outbound internet to GitHub and a container registry required):
+The commands below bootstrap Argo CD from the cluster host, which needs outbound internet to GitHub and a container registry:
 
 ```bash
 git clone https://github.com/{{ site.repo.owner }}/{{ site.repo.name }}
@@ -33,7 +33,7 @@ Then watch Argo converge:
 
 ```bash
 kubectl -n argocd get applications
-kubectl -n demo get deploy,pods -o wide
+kubectl -n gitops-demo get deploy,pods -o wide
 ```
 
 See ADR [0001](https://github.com/{{ site.repo.owner }}/{{ site.repo.name }}/tree/{{ site.repo.branch }}/docs/decisions) for why GitOps, and why this repo is the source of truth rather than the environment that provisions the switches.
@@ -51,7 +51,7 @@ A self-hosted runner attached to a public repository is a known hazard: a fork c
 
 The apply model is full continuous delivery: a push to `main` runs `terraform init`, `plan`, and `apply`, then `ansible-playbook`, then pyATS, with no manual gate. pyATS runs after the apply and fails the build loudly if the fabric is wrong. When the switch console is not reachable, the pyATS step reports a clean skip rather than failing the apply for the wrong reason.
 
-The fabric lane is still a work in progress. The Terraform and Ansible models do not yet apply cleanly to the current topology, so the fabric is built by hand today. The CLI on the [underlay]({{ '/underlay/' | relative_url }}) and [overlay]({{ '/overlay/' | relative_url }}) pages is the current source of truth. The cluster lane is in the same state: the Argo CD manifests and bootstrap are in `gitops/`, but Argo is not yet running on this cluster, so the cluster workloads are applied by hand too.
+The fabric lane is still a work in progress. The Terraform and Ansible models do not yet apply cleanly to the current topology, so an operator builds the fabric by hand today, and the CLI on the [underlay]({{ '/underlay/' | relative_url }}) and [overlay]({{ '/overlay/' | relative_url }}) pages is the current source of truth. The cluster lane, by contrast, runs today: Argo CD reconciles the `gitops/apps/` workloads from `main`.
 
 See ADR [0003](https://github.com/{{ site.repo.owner }}/{{ site.repo.name }}/tree/{{ site.repo.branch }}/docs/decisions) for the full trade-off, including the one-click gate that is the obvious upgrade path if the no-gate choice changes.
 
