@@ -37,6 +37,14 @@
   margin-right: var(--space-2);
 }
 
+/* Keep the title and each nav item on one line. With ten items the browser
+   otherwise breaks words ("BRKDCN-2982" -> "BRKDCN- / 2982", "E2E Path" ->
+   "E2E / Path"). Tighten the gap so the items fit, and let whole items wrap to
+   a second line as a last resort instead of breaking a word. */
+.nav-brand { white-space: nowrap; }
+.site-header .nav-links { flex-wrap: wrap; gap: var(--space-3); row-gap: var(--space-1); justify-content: flex-end; }
+.nav-link { white-space: nowrap; }
+
 /* Mobile nav toggle (hidden on desktop) */
 .nav-toggle {
   display: none;
