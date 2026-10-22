@@ -1,7 +1,7 @@
 # Jekyll configuration for the BRKDCN-2982 workshop site.
 # The build runs in CI through .github/workflows/pages.yaml.
 
-title: BRKDCN-2982 Workshop
+title: BRKDCN-2982
 description: >-
   Build a single-AS NX-OS VXLAN BGP EVPN fabric and peer a Kubernetes cluster
   into it with Cilium BGP, so pod CIDRs leave the cluster as EVPN Type-5 routes.
@@ -40,14 +40,14 @@ nav:
     url: /underlay/
   - title: Overlay
     url: /overlay/
-  - title: Cilium BGP
-    url: /cilium-bgp/
-  - title: Egress gateway
-    url: /egress-gateway/
-  - title: Validate the path
-    url: /validation/
   - title: Use cases
     url: /use-cases/
+  - title: Cilium BGP
+    url: /cilium-bgp/
+  - title: EgressGW
+    url: /egress-gateway/
+  - title: E2E Path
+    url: /validation/
   - title: Pipeline
     url: /pipeline/
 
