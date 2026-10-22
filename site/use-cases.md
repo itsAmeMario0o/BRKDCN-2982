@@ -45,50 +45,69 @@ Default-deny a namespace, then open exactly the paths the app needs, first at L3
 
 Cilium enforces policy in eBPF at the pod's network interface, so this works the same whether the two pods land on the same node or on nodes hanging off different leaves in the fabric.
 
-**Key features**
+**What it shows**
 
-- L3/L4 segmentation with `CiliumNetworkPolicy`, identity-based rather than IP-based.
-- L7 HTTP filtering: allow `GET /public`, deny everything else.
-- Default-deny posture: once a pod is selected by any policy, everything not explicitly allowed is dropped.
+- Default-deny: once a pod is selected by any policy, anything not explicitly allowed is dropped.
+- L3/L4 segmentation with `CiliumNetworkPolicy`, by pod identity rather than IP.
+- L7 HTTP filtering: allow `GET /api/...`, and anything else gets a 403 from the proxy, not the app.
+- DNS-aware egress with `toFQDNs`: allow one external name and nothing else.
+- A cluster-wide deny that holds across every namespace.
+
+The first two policies are standard Kubernetes `NetworkPolicy`, portable across any CNI. The rest are `CiliumNetworkPolicy` and one `CiliumClusterwideNetworkPolicy`, which add the L7, DNS, and cluster-wide behavior standard policy cannot express.
+
+**The demo app**
+
+One small Python app (standard library only) runs as three tiers through a `ROLE` variable: a `frontend` with a web UI and a probe endpoint, a `backend` that answers any `GET` with 200, and a `database` stand-in. Build it and make it available to the cluster first: `docker build -t connectivity-tester:latest app/`, then push or load the image.
 
 **Manifests**
 
-| File | Purpose |
-|------|---------|
-| `00-demo-app.yaml` | `frontend` and `backend` deployments and a `backend` service in the `demo` namespace. |
-| `01-default-deny.yaml` | An empty-ingress policy selecting all pods in `demo`, which drops everything. |
-| `02-l4-allow.yaml` | Allow `frontend` to reach `backend` on TCP 8080 only. |
-| `03-l7-allow.yaml` | Narrow the same path to HTTP `GET /public`. |
+| File | Kind | Purpose |
+|------|------|---------|
+| `00-demo-app.yaml` | Namespace, Deployments, Services | The `demo` namespace and the three tiers. |
+| `01-default-deny.yaml` | NetworkPolicy | Select all pods in `demo`, drop all ingress and egress. |
+| `02-dns-allow.yaml` | NetworkPolicy | Allow egress to CoreDNS on 53, so names resolve. |
+| `03-l4-allow.yaml` | CiliumNetworkPolicy | Allow `frontend` to reach `backend` on TCP 8081. |
+| `04-l7-allow.yaml` | CiliumNetworkPolicy | Narrow the backend rule to HTTP `GET /api/...`. |
+| `05-fqdn-egress.yaml` | CiliumNetworkPolicy | Allow the frontend to reach `api.github.com:443` only. |
+| `06-clusterwide-deny.yaml` | CiliumClusterwideNetworkPolicy | Deny every pod egress to the link-local metadata address. |
 
 **Run it**
 
 ```bash
 kubectl apply -f 00-demo-app.yaml
-# baseline: frontend can reach backend
-kubectl exec -n demo deploy/frontend -- curl -s backend:8080/public
+kubectl -n demo rollout status deploy/backend deploy/frontend deploy/database
+
+# one alias for every probe, run from inside the frontend pod
+B="kubectl exec -n demo deploy/frontend -- curl -s --max-time 3"
+
+$B http://backend:8081/api/health             # baseline: 200 ok
 
 kubectl apply -f 01-default-deny.yaml
-# now it is dropped
-kubectl exec -n demo deploy/frontend -- curl -s --max-time 3 backend:8080/public || echo "denied (expected)"
+$B http://backend:8081/api/health || echo "denied (expected): the name does not even resolve"
 
-kubectl apply -f 02-l4-allow.yaml
-# allowed again on 8080
-kubectl exec -n demo deploy/frontend -- curl -s backend:8080/public
+kubectl apply -f 02-dns-allow.yaml            # names resolve again, TCP still denied
+kubectl apply -f 03-l4-allow.yaml
+$B http://backend:8081/api/health             # 200 ok again
 
-kubectl apply -f 03-l7-allow.yaml
-# GET /public allowed, POST denied by L7
-kubectl exec -n demo deploy/frontend -- curl -s backend:8080/public
-kubectl exec -n demo deploy/frontend -- curl -s -XPOST --max-time 3 backend:8080/public || echo "L7 denied (expected)"
+kubectl apply -f 04-l7-allow.yaml
+$B http://backend:8081/api/health             # GET /api/... allowed
+$B http://backend:8081/private || echo "L7 denied (403, expected)"
+
+kubectl apply -f 05-fqdn-egress.yaml
+$B https://api.github.com | head -c 40         # the one allowed name
+$B https://example.com || echo "other names denied (expected)"
+
+kubectl apply -f 06-clusterwide-deny.yaml      # metadata egress denied cluster-wide
 ```
 
 **Verify**
 
 ```bash
-cilium policy get
-kubectl get ciliumnetworkpolicies -n demo
+kubectl get networkpolicies,ciliumnetworkpolicies -n demo
+kubectl get ciliumclusterwidenetworkpolicies
 ```
 
-Watch the drops land in use case 2: `hubble observe --namespace demo --verdict DROPPED`.
+Watch the verdicts land in use case 2: `hubble observe --namespace demo --verdict DROPPED`.
 
 Source: [`use-cases/01-network-policies/`](https://github.com/{{ site.repo.owner }}/{{ site.repo.name }}/tree/{{ site.repo.branch }}/use-cases/01-network-policies).
 

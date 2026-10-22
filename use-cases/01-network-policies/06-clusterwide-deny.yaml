@@ -1,0 +1,18 @@
+# A portable guardrail, cluster-wide. CiliumClusterwideNetworkPolicy is not
+# tied to a namespace: an empty endpointSelector selects every pod in every
+# namespace. This one denies egress to the link-local metadata address
+# 169.254.169.254, which many infrastructure platforms expose to a workload
+# for instance data and short-lived credentials. Blocking it stops a
+# compromised pod from reaching it through a server-side request forgery.
+#
+# This is a baseline pattern to keep in any cluster. It applies regardless of
+# what else a namespace allows, because a deny rule always wins.
+apiVersion: cilium.io/v2
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: deny-metadata-egress
+spec:
+  endpointSelector: {}
+  egressDeny:
+    - toCIDR:
+        - 169.254.169.254/32

@@ -1,0 +1,34 @@
+# DNS-aware egress. Allow the frontend to reach exactly one external name,
+# api.github.com on 443, and nothing else on the internet. This is a Cilium
+# feature that standard NetworkPolicy cannot express.
+#
+# The first egress rule sends DNS through Cilium's DNS proxy so it can watch
+# the query and response and learn which address the name resolves to. The
+# toFQDNs rule then permits traffic to that learned address. Both are required:
+# allowing port 53 alone is not enough, because Cilium must read the DNS
+# payload, not just pass it.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: frontend-egress-fqdn
+  namespace: demo
+spec:
+  endpointSelector:
+    matchLabels:
+      app: frontend
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - { port: "53", protocol: ANY }
+          rules:
+            dns:
+              - matchPattern: "*"
+    - toFQDNs:
+        - matchName: api.github.com
+      toPorts:
+        - ports:
+            - { port: "443", protocol: TCP }

@@ -1,0 +1,13 @@
+# Default-deny for the whole namespace. A standard Kubernetes NetworkPolicy,
+# portable across any CNI. Once this is applied, every pod in demo is selected,
+# so all ingress and egress is dropped until a later policy allows a path.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: demo
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress

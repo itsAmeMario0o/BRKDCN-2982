@@ -1,0 +1,37 @@
+# L3/L4 allow, identity-based. Open exactly one path: frontend to backend on
+# TCP 8081. Two CiliumNetworkPolicy objects, because egress is allowed on the
+# frontend and ingress is allowed on the backend. Selection is by pod label,
+# not IP, so it holds wherever the pods are scheduled.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: frontend-egress-backend
+  namespace: demo
+spec:
+  endpointSelector:
+    matchLabels:
+      app: frontend
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            app: backend
+      toPorts:
+        - ports:
+            - { port: "8081", protocol: TCP }
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: backend-allow-frontend
+  namespace: demo
+spec:
+  endpointSelector:
+    matchLabels:
+      app: backend
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            app: frontend
+      toPorts:
+        - ports:
+            - { port: "8081", protocol: TCP }

@@ -1,0 +1,25 @@
+# L7 HTTP allow. Same object name as the L4 backend rule in 03, so applying
+# this replaces that rule in place and narrows it: only GET on /api/... is
+# allowed. Any other method or path gets an HTTP 403 from the Cilium Envoy
+# proxy, not from the app, which is how you prove the policy is enforcing L7.
+# The frontend-egress-backend rule from 03 stays as is.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: backend-allow-frontend
+  namespace: demo
+spec:
+  endpointSelector:
+    matchLabels:
+      app: backend
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            app: frontend
+      toPorts:
+        - ports:
+            - { port: "8081", protocol: TCP }
+          rules:
+            http:
+              - method: GET
+                path: "/api/.*"
