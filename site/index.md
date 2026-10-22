@@ -9,7 +9,7 @@ hide_page_header: true
 
 <section class="hero">
   <p class="eyebrow">A build-it-yourself fabric lab</p>
-  <h1>A pod gets an IP, and the <span class="gradient-text">whole fabric</span> can route to it.</h1>
+  <h1>Nexus <span class="gradient-text">&amp; Isovalent</span> Workshop</h1>
   <p class="lede">This workshop builds a single-AS VXLAN BGP EVPN fabric on Nexus switches, stands a Kubernetes cluster beside it, and lets Cilium advertise pod networks straight into the fabric over BGP. No tunnel to the host, no static routes. A pod address becomes an ordinary prefix in the fabric's routing table.</p>
   <div class="actions">
     <a class="btn btn-primary" href="{{ '/architecture/' | relative_url }}">How it fits together</a>
@@ -18,6 +18,8 @@ hide_page_header: true
   </div>
   <hr class="rule-gradient hero-rule">
 </section>
+
+{% include overview-diagram.html %}
 
 ## What you will build
 

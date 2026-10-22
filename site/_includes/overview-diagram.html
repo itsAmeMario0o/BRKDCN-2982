@@ -1,0 +1,59 @@
+<figure class="diagram" role="img" aria-label="The whole lab on one page. Two spines reflect routes for four leaves in fabric AS 65400. A Kubernetes cluster in AS 65001 peers the leaves over eBGP, and the border leaf pair reaches the internet through an ASA firewall in AS 65500.">
+<svg viewBox="0 0 720 440" style="max-width:100%;height:auto">
+  <!-- fabric container -->
+  <rect x="20" y="104" width="470" height="226" rx="12" fill="#02C8FF" fill-opacity="0.06" stroke="#02C8FF" stroke-opacity="0.35" stroke-width="1"/>
+  <text x="34" y="126" font-size="12" fill="#02C8FF" opacity="0.85">VXLAN BGP EVPN fabric &#183; AS 65400</text>
+  <!-- spine-leaf links -->
+  <g stroke="currentColor" stroke-width="1" opacity="0.5">
+    <line x1="88" y1="262" x2="205" y2="190"/><line x1="88" y1="262" x2="345" y2="190"/>
+    <line x1="200" y1="262" x2="205" y2="190"/><line x1="200" y1="262" x2="345" y2="190"/>
+    <line x1="312" y1="262" x2="205" y2="190"/><line x1="312" y1="262" x2="345" y2="190"/>
+    <line x1="424" y1="262" x2="205" y2="190"/><line x1="424" y1="262" x2="345" y2="190"/>
+  </g>
+  <!-- spines -->
+  <rect x="150" y="146" width="110" height="44" rx="6" fill="none" stroke="#02C8FF" stroke-width="1.5"/>
+  <text x="205" y="168" text-anchor="middle" font-size="13" fill="currentColor">spine1</text>
+  <text x="205" y="183" text-anchor="middle" font-size="10.5" fill="#02C8FF">route reflector</text>
+  <rect x="290" y="146" width="110" height="44" rx="6" fill="none" stroke="#02C8FF" stroke-width="1.5"/>
+  <text x="345" y="168" text-anchor="middle" font-size="13" fill="currentColor">spine2</text>
+  <text x="345" y="183" text-anchor="middle" font-size="10.5" fill="#02C8FF">route reflector</text>
+  <!-- leaves -->
+  <g font-size="12.5" fill="currentColor">
+    <rect x="40" y="262" width="96" height="38" rx="6" fill="none" stroke="currentColor" stroke-width="1.2"/>
+    <text x="88" y="285" text-anchor="middle">leaf1</text>
+    <rect x="152" y="262" width="96" height="38" rx="6" fill="none" stroke="currentColor" stroke-width="1.2"/>
+    <text x="200" y="285" text-anchor="middle">leaf2</text>
+    <rect x="264" y="262" width="96" height="38" rx="6" fill="none" stroke="currentColor" stroke-width="1.2"/>
+    <text x="312" y="285" text-anchor="middle">leaf3</text>
+    <rect x="376" y="262" width="96" height="38" rx="6" fill="none" stroke="currentColor" stroke-width="1.2"/>
+    <text x="424" y="285" text-anchor="middle">leaf4</text>
+  </g>
+  <text x="144" y="316" text-anchor="middle" font-size="10.5" fill="#02C8FF" opacity="0.85">pair A</text>
+  <text x="368" y="316" text-anchor="middle" font-size="10.5" fill="#02C8FF" opacity="0.85">pair B &#183; border</text>
+  <!-- node links -->
+  <g stroke="currentColor" stroke-width="1" opacity="0.5">
+    <line x1="88" y1="300" x2="135" y2="372"/><line x1="200" y1="300" x2="135" y2="372"/>
+    <line x1="312" y1="300" x2="365" y2="372"/><line x1="424" y1="300" x2="365" y2="372"/>
+  </g>
+  <text x="250" y="350" text-anchor="middle" font-size="10.5" fill="currentColor" opacity="0.7">eBGP, pod CIDRs</text>
+  <!-- nodes -->
+  <rect x="70" y="372" width="130" height="44" rx="6" fill="none" stroke="currentColor" stroke-width="1.2"/>
+  <text x="135" y="392" text-anchor="middle" font-size="12.5" fill="currentColor">k8s-cp</text>
+  <text x="135" y="407" text-anchor="middle" font-size="10" fill="#02C8FF">Cilium &#183; AS 65001</text>
+  <rect x="300" y="372" width="130" height="44" rx="6" fill="none" stroke="currentColor" stroke-width="1.2"/>
+  <text x="365" y="392" text-anchor="middle" font-size="12.5" fill="currentColor">k8s-worker</text>
+  <text x="365" y="407" text-anchor="middle" font-size="10" fill="#02C8FF">Cilium &#183; AS 65001</text>
+  <!-- border: internet + ASA -->
+  <rect x="575" y="150" width="110" height="38" rx="19" fill="none" stroke="currentColor" stroke-width="1.1" opacity="0.75"/>
+  <text x="630" y="174" text-anchor="middle" font-size="12" fill="currentColor" opacity="0.85">internet</text>
+  <rect x="560" y="258" width="140" height="46" rx="6" fill="none" stroke="currentColor" stroke-width="1.4"/>
+  <text x="630" y="280" text-anchor="middle" font-size="12.5" fill="currentColor">ASA firewall</text>
+  <text x="630" y="296" text-anchor="middle" font-size="10" fill="#02C8FF">AS 65500 &#183; border</text>
+  <g stroke="currentColor" stroke-width="1" opacity="0.55">
+    <line x1="630" y1="188" x2="630" y2="258"/>
+    <line x1="560" y1="281" x2="472" y2="281"/>
+  </g>
+  <text x="516" y="252" text-anchor="middle" font-size="10.5" fill="currentColor" opacity="0.7">eBGP, border</text>
+</svg>
+<figcaption>The whole lab on one page. A Kubernetes cluster in AS 65001 peers the leaves over eBGP and advertises its pod CIDRs; each leaf re-originates them as EVPN Type-5 routes across the AS 65400 fabric. The border pair, leaf3 and leaf4, reaches the outside through the ASA firewall in AS 65500.</figcaption>
+</figure>
