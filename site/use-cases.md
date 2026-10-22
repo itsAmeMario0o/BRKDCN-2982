@@ -32,7 +32,7 @@ Each use case is self-contained: a short summary, the features it shows, the man
   </li>
 </ul>
 
-Use case 3 is the headline. Use cases 1 and 2 are things any Cilium cluster can do; use case 3 is what makes this a fabric lab rather than a single-cluster one. Start there if you only read one.
+Use case 3 is the reason the lab exists. Use cases 1 and 2 are things any Cilium cluster can do; use case 3 is what makes this a fabric lab rather than a single-cluster one. If you read only one, read that one.
 
 <div class="callout">
 <strong>Prerequisites.</strong>
@@ -78,7 +78,7 @@ kubectl apply -f 00-demo-app.yaml
 kubectl -n demo rollout status deploy/backend deploy/frontend deploy/database
 ```
 
-Run curl from inside the frontend pod and watch the HTTP status change as each policy applies. This helper runs curl in the frontend pod and prints the status code:
+Each policy changes what the frontend can reach. Apply them one at a time and watch the HTTP status code change. This helper runs curl inside the frontend pod and prints the status code it gets back:
 
 ```bash
 fe() { kubectl exec -n demo deploy/frontend -- curl -s -o /dev/null -w "%{http_code}\n" --max-time 5 "$1"; }
@@ -122,7 +122,7 @@ Source: [`use-cases/01-network-policies/`](https://github.com/{{ site.repo.owner
 
 Turn on Hubble and watch the flows: every connection, every policy verdict, and a live service map, without touching the application.
 
-Hubble is Cilium's observability layer. It reads the same eBPF data path that enforces policy in use case 1, so "why was this dropped?" has an answer you can see rather than guess. It is not separate infrastructure. It is `hubble-relay` and `hubble-ui`, two small pods enabled on the Cilium install you already have.
+Hubble is Cilium's observability layer. It reads the same eBPF data path that enforces policy in use case 1, so "why was this dropped?" has an answer you can see rather than guess. Hubble is not extra infrastructure to stand up. It is `hubble-relay` and `hubble-ui`, two small pods you enable on the Cilium install you already have.
 
 **Key features**
 

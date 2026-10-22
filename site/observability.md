@@ -3,14 +3,14 @@ layout: default
 title: Observability
 permalink: /observability/
 eyebrow: Operate
-summary: Two signals reach Splunk, cluster logs and metrics through an OpenTelemetry Collector and network flows through Hubble, so a policy drop has a visible answer and a history.
+summary: Two signals reach Splunk: cluster logs and metrics through an OpenTelemetry Collector, and network flows through Hubble. A policy drop then has a visible answer and a history.
 ---
 
 ## The idea
 
 The cluster sends two signals to Splunk, and together they answer two different questions. Cluster logs and metrics answer "what is the cluster doing?" Network flows answer "what is talking to what, and did policy allow it?" Both ride one pipeline into Splunk, and both land under their own index and sourcetype so a search can tell them apart.
 
-The point of the second signal is the one that closes the loop with the rest of the lab. The same extended Berkeley Packet Filter (eBPF) datapath that enforces network policy is the one Hubble watches, so a drop you configured on the [use cases]({{ '/use-cases/' | relative_url }}) page shows up here as a dropped flow. The enforcement and the evidence come from the same place.
+The second signal is the one that closes the loop with the rest of the lab. Hubble watches the same extended Berkeley Packet Filter (eBPF) datapath that enforces network policy, so a drop you configured on the [use cases]({{ '/use-cases/' | relative_url }}) page shows up here as a dropped flow. The enforcement and the evidence come from the same place.
 
 <figure class="diagram" role="img" aria-label="Two signals leave the Kubernetes cluster and reach Splunk. The Splunk OpenTelemetry Collector runs as a per-node agent plus a cluster receiver and sends logs and metrics to the Splunk HTTP Event Collector. Separately, a Hubble exporter Deployment runs hubble observe and writes flow JSON to its standard output, which the same OpenTelemetry log pipeline carries to the HTTP Event Collector. Hubble Relay and Hubble UI stay inside the cluster for a live service map.">
 <svg viewBox="0 0 660 330" style="max-width:100%;height:auto">

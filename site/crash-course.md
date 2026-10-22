@@ -6,7 +6,7 @@ eyebrow: Run it
 summary: The whole lab as a fast demo. Each step is one command and the reason behind it, end to end in about 35 minutes.
 ---
 
-This page runs the entire lab as a demo. Each step is a command and the point behind it, with no narrative. Use it to walk the flow end to end in about 35 minutes, or to hand the lab to another engineer who wants to run the same path. Each section links to the full page that explains it.
+This page runs the whole lab as a fast demo: each step is one command and the reason it matters, nothing more. Walk it end to end in about 35 minutes, or hand it to another engineer who needs to run the same path. Each section links to the full page that explains it.
 
 ## Before you start
 
@@ -58,7 +58,7 @@ show vpc brief        ! leaf3: the pair shares one anycast VTEP
 show ip pim rp        ! spine: the anycast rendezvous point
 ```
 
-**Why.** A virtual port channel (vPC) makes a leaf pair one logical next hop for a dual-homed host, so either leaf forwards. The anycast rendezvous point (RP) gives multicast, which carries broadcast traffic, a redundant meeting point shared by both spines.
+**Why.** A virtual port channel (vPC) makes a leaf pair one logical next hop for a dual-homed host, so either leaf can forward its traffic. Broadcast traffic rides on multicast here, and the anycast rendezvous point (RP) gives that multicast a redundant meeting point that both spines share.
 
 ## 5. The cluster
 

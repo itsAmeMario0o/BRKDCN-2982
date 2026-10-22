@@ -40,7 +40,7 @@ A single-AS design keeps the fabric quiet. Because every switch shares one AS nu
 
 <div class="phase">
   <h3><span class="step-num">vPC</span> The leaf pair</h3>
-  <p>Two of the leaves form a vPC pair that shares an anycast VTEP address. To the rest of the fabric the pair is one next hop, so a dual-homed host or an endpoint behind the pair is reachable whichever leaf forwards it.</p>
+  <p>Two of the leaves form a vPC pair that shares an anycast VTEP address. To the rest of the fabric the pair is one next hop, so a dual-homed host or an endpoint behind the pair stays reachable no matter which leaf forwards the traffic.</p>
 </div>
 
 <figure class="diagram" role="img" aria-label="Two spines and four leaves in one autonomous system. The same iBGP sessions between each leaf and both spines carry the IPv4 underlay and the l2vpn evpn overlay, and the spines reflect both.">
@@ -93,7 +93,7 @@ Because `red` and `blue` route to each other across the fabric over the Layer 3 
 
 ## How a node attaches
 
-A node does not plug into a single leaf. The node dual-homes into a vPC pair over one bonded link and speaks eBGP to the pair to advertise its pod CIDR.
+A node does not plug into a single leaf. It dual-homes into a vPC pair over one bonded link and peers the pair over eBGP to advertise its pod CIDR.
 
 <figure class="diagram" role="img" aria-label="A Kubernetes node dual-homes into a vPC pair of two leaves. One bonded link splits to both leaves, which share an anycast tunnel endpoint, and the node peers the pair over eBGP.">
 <svg viewBox="0 0 520 300" style="max-width:100%;height:auto">

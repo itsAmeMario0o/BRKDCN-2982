@@ -33,7 +33,7 @@ Everything here is code: a Terraform data model for the underlay, an Ansible dat
 
 ## The prefix's journey, in one picture
 
-The headline of the lab is a single path. A pod address leaves the cluster as plain BGP and arrives on every tunnel endpoint as an EVPN route, without the cluster knowing the fabric is EVPN at all.
+The point of the whole lab is a single path. A pod address leaves the cluster as plain BGP and arrives on every tunnel endpoint as an EVPN route, without the cluster knowing the fabric is EVPN at all.
 
 ```
 pod (10.244.x.0/24)

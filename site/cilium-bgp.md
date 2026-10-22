@@ -14,7 +14,7 @@ This is the use case the lab is built for. The two [other use cases]({{ '/use-ca
 
 {% include overview-diagram.html cluster_as=true %}
 
-Three autonomous systems (AS) meet here. The fabric is one AS (65400), the cluster is its own (65001), and the border runs a third (65500) out to the ASA (Adaptive Security Appliance). Each node holds an eBGP session to the leaf it attaches to, and that session is the whole seam: the node advertises its PodCIDR southbound, the leaf re-originates it as EVPN northbound.
+Three autonomous systems (AS) meet here. The fabric is one AS (65400), the cluster is its own (65001), and the border runs a third (65500) out to the firewall. Each node holds an eBGP session to the leaf it attaches to, and that session is the whole seam: the node advertises its PodCIDR southbound, the leaf re-originates it as EVPN northbound.
 
 ## The path a pod prefix takes
 
@@ -133,7 +133,7 @@ spec:
 
 <div class="callout">
 <strong>Values track the live cluster.</strong>
-Node names and peer addresses track the cluster they run against. The authoritative values are in the applied <code>bgp.yaml</code>, not this snippet.
+Node names and peer addresses match the cluster they run against. The authoritative values live in the applied <code>bgp.yaml</code>, not in this snippet.
 </div>
 
 ## Run it

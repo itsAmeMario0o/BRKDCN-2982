@@ -146,7 +146,7 @@ router bgp 65400
 
 ### 3. Tenant VRF, VLANs, and anycast gateways
 
-On each leaf. The anycast gateway MAC is the same fabric-wide, which is what lets a host keep one gateway on any leaf.
+Apply this on each leaf. A distributed anycast gateway gives every leaf the same gateway IP and the same gateway MAC, so a host keeps one default gateway no matter which leaf it connects to.
 
 ```nxos
 ! leaf
@@ -190,7 +190,7 @@ The L3 VNI SVI (switched virtual interface) carries no IP address. The SVI is th
 
 ### 4. The VTEP and the EVPN instances
 
-The NVE (network virtualization edge) interface sources from loopback1 and carries the L3 VNI plus the L2 VNIs. BGP still handles host and MAC reachability. Broadcast traffic rides the multicast tree the underlay built, so each L2 VNI binds to a `mcast-group` rather than listing every remote VTEP for head-end replication.
+The NVE (network virtualization edge) interface is where the leaf encapsulates and decapsulates VXLAN. It sources from loopback1 and carries the L3 VNI plus the L2 VNIs. BGP still handles host and MAC reachability. Broadcast traffic rides the multicast tree the underlay built, so each L2 VNI binds to a `mcast-group` rather than listing every remote VTEP for head-end replication.
 
 ```nxos
 ! leaf

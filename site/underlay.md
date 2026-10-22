@@ -8,7 +8,7 @@ summary: Build the single-AS iBGP underlay in order. Features, loopbacks, point-
 
 The underlay has two jobs: make every switch loopback reachable from every other switch, and carry the overlay's broadcast traffic. The overlay rides on top of both, so the underlay comes first.
 
-The design is deliberately plain. One autonomous system (AS) for the whole fabric, 65400. iBGP (internal Border Gateway Protocol, BGP) over the point-to-point links, with the two spines as route reflectors. No OSPF, no IS-IS. The spines also advertise their connected `/31` links, so a leaf can resolve the next hop to a remote leaf's VTEP (VXLAN tunnel endpoint) loopback. That point matters for the overlay later.
+The design is deliberately plain. One autonomous system (AS) for the whole fabric, 65400. iBGP (internal Border Gateway Protocol, BGP) over the point-to-point links, with the two spines as route reflectors that pass each leaf's routes to the others so the leaves never peer directly. No OSPF, no IS-IS. The spines also advertise their connected `/31` links, so a leaf can resolve the next hop to a remote leaf's VTEP (VXLAN tunnel endpoint) loopback. That point matters for the overlay later.
 
 Broadcast, unknown-unicast, and multicast traffic (BUM) rides a multicast tree. PIM (Protocol Independent Multicast) sparse mode runs across the fabric, and the two spines share one anycast rendezvous point (RP). Each L2 segment maps to a multicast group, so a leaf floods a broadcast once and the fabric replicates it down the tree to the leaves that joined. The overlay page sets the per-segment groups. This page builds the PIM core they depend on.
 
@@ -58,7 +58,7 @@ Loopback 0 is the router ID and the BGP peering address. Loopback 1 is the VTEP 
 | leaf3 | 10.0.0.13 | 10.0.1.13 | n/a | Eth1/1 10.1.1.5/31, Eth1/2 10.1.2.5/31 |
 | leaf4 | 10.0.0.14 | 10.0.1.14 | n/a | Eth1/1 10.1.1.7/31, Eth1/2 10.1.2.7/31 |
 
-Both spines share the same loopback 254 address, 10.254.254.254. That is deliberate. A leaf sends its join toward whichever spine is closer, and PIM anycast keeps the two spines in sync, so either one can serve as the rendezvous point.
+Both spines share the same loopback 254 address, 10.254.254.254. That is deliberate. A leaf sends its join toward whichever spine is closer, and PIM anycast keeps the two spines in sync, so either one can be the rendezvous point.
 
 ## Build order
 
@@ -252,7 +252,7 @@ show ip pim neighbor               ! a PIM neighbor on every fabric link
 show ip mroute                     ! the shared trees once the overlay groups are active
 ```
 
-Loopback-to-loopback reachability across the fabric is the finish line for this stage. The overlay's EVPN (Ethernet VPN) sessions run loopback to loopback, so they cannot form until the underlay carries those loopbacks everywhere.
+This stage is complete when every loopback is reachable from every other loopback across the fabric. The overlay's EVPN (Ethernet VPN) sessions run loopback to loopback, so they cannot form until the underlay carries those loopbacks everywhere.
 
 <div class="callout">
 <strong>On automation.</strong>
