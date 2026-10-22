@@ -48,6 +48,58 @@ The result is a symmetric IRB fabric. One tenant VRF, `tenant1`, with an L3 VNI.
 | VTEP source | loopback1 (from the underlay) |
 | EVPN | iBGP `l2vpn evpn`, spines as route reflectors |
 
+## How a packet crosses the fabric
+
+Symmetric integrated routing and bridging (IRB) moves traffic between two subnets on two different leaves in a fixed sequence: bridge, route, route, bridge. The L2 VNIs stay local to each leaf. The routing between them happens over the L3 VNI, a transit segment that only the VTEPs see.
+
+<figure class="diagram" role="img" aria-label="A packet from a red host on leaf1 is bridged to leaf1, routed into the L3 VNI, carried over VXLAN to leaf4, routed out, and bridged to a blue host. The L3 VNI is the transit segment between the two VTEPs.">
+<svg viewBox="0 0 700 220" style="max-width:100%;height:auto">
+  <defs>
+    <marker id="ov-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g font-size="11" fill="currentColor">
+    <!-- host A -->
+    <rect x="8" y="84" width="96" height="50" rx="6" fill="none" stroke="currentColor" stroke-width="1.2"/>
+    <text x="56" y="105" text-anchor="middle">Host A</text>
+    <text x="56" y="121" text-anchor="middle" opacity="0.75">red 10.0.100.10</text>
+    <!-- leaf1 -->
+    <rect x="150" y="70" width="128" height="78" rx="6" fill="none" stroke="currentColor" stroke-width="1.2"/>
+    <text x="214" y="92" text-anchor="middle">leaf1 VTEP</text>
+    <text x="214" y="109" text-anchor="middle" opacity="0.75">SVI red, tenant1</text>
+    <text x="214" y="125" text-anchor="middle" opacity="0.75">source 10.0.1.11</text>
+    <!-- overlay pipe -->
+    <rect x="300" y="82" width="100" height="54" rx="6" fill="none" stroke="#02C8FF" stroke-width="1.5"/>
+    <text x="350" y="104" text-anchor="middle" fill="#02C8FF">VXLAN</text>
+    <text x="350" y="120" text-anchor="middle" fill="#02C8FF">L3 VNI 50000</text>
+    <!-- leaf4 -->
+    <rect x="422" y="70" width="128" height="78" rx="6" fill="none" stroke="currentColor" stroke-width="1.2"/>
+    <text x="486" y="92" text-anchor="middle">leaf4 VTEP</text>
+    <text x="486" y="109" text-anchor="middle" opacity="0.75">SVI blue, tenant1</text>
+    <text x="486" y="125" text-anchor="middle" opacity="0.75">dest 10.0.1.14</text>
+    <!-- host Y -->
+    <rect x="596" y="84" width="96" height="50" rx="6" fill="none" stroke="currentColor" stroke-width="1.2"/>
+    <text x="644" y="105" text-anchor="middle">Host Y</text>
+    <text x="644" y="121" text-anchor="middle" opacity="0.75">blue 10.0.200.10</text>
+  </g>
+  <!-- arrows -->
+  <g stroke="currentColor" stroke-width="1.3" fill="none">
+    <line x1="104" y1="109" x2="148" y2="109" marker-end="url(#ov-arrow)"/>
+    <line x1="278" y1="109" x2="298" y2="109" marker-end="url(#ov-arrow)"/>
+    <line x1="400" y1="109" x2="420" y2="109" marker-end="url(#ov-arrow)"/>
+    <line x1="550" y1="109" x2="594" y2="109" marker-end="url(#ov-arrow)"/>
+  </g>
+  <g font-size="10" fill="currentColor" opacity="0.8" text-anchor="middle">
+    <text x="126" y="76">bridge</text>
+    <text x="289" y="76">route</text>
+    <text x="411" y="76">route</text>
+    <text x="572" y="76">bridge</text>
+  </g>
+</svg>
+<figcaption>Red to blue across the fabric. leaf1 bridges the frame from Host A, routes it into the L3 VNI, and encapsulates it in VXLAN with the two leaf VTEP loopbacks as the outer source and destination. leaf4 decapsulates, routes into the blue subnet, and bridges to Host Y.</figcaption>
+</figure>
+
 ## Build order
 
 ### 1. Enable the features
@@ -69,6 +121,8 @@ feature vpc
 feature lacp
 ```
 
+Order matters here. `feature nv overlay` has to come before `nv overlay evpn`. Reverse them and NX-OS rejects the command, because the overlay module is not loaded yet.
+
 ### 2. Spines as EVPN route reflectors
 
 Each spine reflects `l2vpn evpn` routes between the leaves and keeps all route targets so it does not need per-tenant config.
@@ -82,8 +136,7 @@ router bgp 65400
     remote-as 65400
     update-source loopback0
     address-family l2vpn evpn
-      send-community
-      send-community extended
+      send-community both
       route-reflector-client
   ! repeat for leaf2-4 loopbacks (10.0.0.12 .13 .14)
 ```
@@ -110,22 +163,27 @@ vrf context tenant1
     route-target both auto
     route-target both auto evpn
 
-interface Vlan2001               ! L3 VNI SVI, routing only
+interface Vlan2001               ! L3 VNI SVI, routing only, no IP address
   no shutdown
   vrf member tenant1
   ip forward
+  no ip redirects
 
 interface Vlan100                ! red anycast gateway
   no shutdown
   vrf member tenant1
   ip address 10.0.100.1/24
   fabric forwarding mode anycast-gateway
+  no ip redirects
 interface Vlan200                ! blue anycast gateway
   no shutdown
   vrf member tenant1
   ip address 10.0.200.1/24
   fabric forwarding mode anycast-gateway
+  no ip redirects
 ```
+
+The L3 VNI SVI carries no IP address. It is the routing anchor for the tenant VRF, so it needs `ip forward` and `no ip redirects` and nothing else. The anycast gateway SVIs take `no ip redirects` as well, since the gateway address is identical on every leaf and a redirect would point nowhere useful.
 
 ### 4. The VTEP and the EVPN instances
 
@@ -167,14 +225,12 @@ router bgp 65400
     remote-as 65400
     update-source loopback0
     address-family l2vpn evpn
-      send-community
-      send-community extended
+      send-community both
   neighbor 10.0.0.2              ! spine2 loopback0
     remote-as 65400
     update-source loopback0
     address-family l2vpn evpn
-      send-community
-      send-community extended
+      send-community both
   vrf tenant1
     address-family ipv4 unicast
       advertise l2vpn evpn

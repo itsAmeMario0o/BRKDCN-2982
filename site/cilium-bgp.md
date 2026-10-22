@@ -26,6 +26,55 @@ pod (10.244.x.0/24)
 
 The cluster speaks plain eBGP; it does not know or care that the fabric is EVPN. The leaf is the seam: BGP IPv4 unicast on the south side, `l2vpn evpn` on the north side.
 
+## What runs on a node
+
+Cilium runs one `cilium-agent` on every node, as a DaemonSet. The agent does three jobs at once. It is the CNI plugin that wires each pod into the kernel. It compiles and loads the eBPF programs that forward and filter traffic, which is how Cilium replaces kube-proxy and the iptables path. And it runs an embedded BGP speaker that peers the leaf and advertises the node's PodCIDR. Pod traffic leaves the node natively, as routed IP. There is no VXLAN tunnel from the node to the host.
+
+<figure class="diagram" role="img" aria-label="Each node runs cilium-agent, which programs the kernel eBPF datapath and runs an embedded BGP speaker. The speaker peers the leaf and advertises the PodCIDR. Pod traffic leaves the node as native routed IP through the NIC to the leaf.">
+<svg viewBox="0 0 640 320" style="max-width:100%;height:auto">
+  <defs>
+    <marker id="cb-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <rect x="20" y="30" width="400" height="275" rx="8" fill="none" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+  <text x="34" y="50" font-size="11" fill="currentColor" opacity="0.7">Kubernetes node</text>
+  <g font-size="11" fill="currentColor">
+    <rect x="44" y="64" width="150" height="46" rx="6" fill="none" stroke="currentColor" stroke-width="1.2"/>
+    <text x="119" y="85" text-anchor="middle">Pod: app container</text>
+    <text x="119" y="101" text-anchor="middle" opacity="0.75">eth0 (veth)</text>
+    <rect x="44" y="196" width="150" height="96" rx="6" fill="none" stroke="currentColor" stroke-width="1.2"/>
+    <text x="119" y="216" text-anchor="middle">Linux kernel</text>
+    <text x="119" y="233" text-anchor="middle" opacity="0.75">eBPF datapath</text>
+    <text x="119" y="249" text-anchor="middle" opacity="0.75">maps: policy, NAT,</text>
+    <text x="119" y="263" text-anchor="middle" opacity="0.75">services (no kube-proxy)</text>
+    <text x="119" y="283" text-anchor="middle" opacity="0.75">NIC: bond0</text>
+    <rect x="228" y="64" width="168" height="170" rx="6" fill="none" stroke="currentColor" stroke-width="1.3"/>
+    <text x="312" y="86" text-anchor="middle">cilium-agent</text>
+    <text x="312" y="102" text-anchor="middle" opacity="0.75">DaemonSet, one per node</text>
+    <text x="252" y="134" opacity="0.9">- CNI plugin</text>
+    <text x="252" y="156" opacity="0.9">- eBPF manager</text>
+    <text x="252" y="178" fill="#02C8FF">- GoBGP speaker</text>
+  </g>
+  <rect x="486" y="150" width="134" height="86" rx="6" fill="none" stroke="currentColor" stroke-width="1.2"/>
+  <text x="553" y="188" text-anchor="middle" font-size="11" fill="currentColor">leaf (top of rack)</text>
+  <text x="553" y="205" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.75">fabric AS 65400</text>
+  <g stroke="currentColor" stroke-width="1.3" fill="none">
+    <line x1="119" y1="110" x2="119" y2="194" marker-end="url(#cb-arrow)"/>
+    <line x1="228" y1="150" x2="196" y2="170" marker-end="url(#cb-arrow)"/>
+    <line x1="194" y1="244" x2="486" y2="210" marker-end="url(#cb-arrow)"/>
+  </g>
+  <line x1="396" y1="150" x2="486" y2="178" stroke="#02C8FF" stroke-width="1.5" fill="none" marker-end="url(#cb-arrow)"/>
+  <g font-size="10" fill="currentColor" opacity="0.85">
+    <text x="128" y="156">veth</text>
+    <text x="226" y="150" text-anchor="end">bpf()</text>
+    <text x="330" y="300" text-anchor="middle">pod traffic, native routed IP (no VXLAN)</text>
+  </g>
+  <text x="408" y="140" font-size="10" fill="#02C8FF">BGP :179, advertise PodCIDR</text>
+</svg>
+<figcaption>The agent programs the kernel datapath and runs the BGP speaker. The speaker peers the leaf (cyan) and advertises the PodCIDR; pod traffic itself leaves the node as native routed IP.</figcaption>
+</figure>
+
 ## The three CRDs
 
 Cilium's BGP control plane is configured with three custom resources. They live with the fabric config, in [`cilium/bgp.yaml`](https://github.com/{{ site.repo.owner }}/{{ site.repo.name }}/blob/{{ site.repo.branch }}/cilium/bgp.yaml).

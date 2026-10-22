@@ -60,7 +60,7 @@ Because `red` and `blue` route to each other across the fabric over the L3 VNI, 
 
 The cluster speaks plain eBGP. It neither knows nor cares that the fabric is EVPN. The leaf does the translation: it learns the pod prefix as an ordinary IPv4 route in the tenant VRF, then re-originates it as an EVPN Type-5 (IP prefix) route. The spines reflect that route to every other leaf, and any tunnel endpoint can now forward to the pod across VXLAN.
 
-That one seam is what makes this a fabric lab rather than a single-cluster one. The next pages build it from the bottom up: the [underlay]({{ '/underlay/' | relative_url }}) first, then the [overlay and vPC]({{ '/overlay/' | relative_url }}), then the [Cilium peering]({{ '/cilium-bgp/' | relative_url }}) that lights up the whole chain.
+That one seam is what makes this a Nexus and Isovalent lab, not a single-cluster one. The next pages build it from the bottom up: the [underlay]({{ '/underlay/' | relative_url }}) first, then the [overlay and vPC]({{ '/overlay/' | relative_url }}), then the [Cilium peering]({{ '/cilium-bgp/' | relative_url }}) that lights up the whole chain.
 
 <div class="callout">
 <strong>Design records.</strong>

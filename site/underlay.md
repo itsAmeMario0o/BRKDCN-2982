@@ -92,10 +92,12 @@ Routed `/31` links, no switchport. Each spine faces leaf1 through leaf4 on Eth1/
 ! spine1
 interface Ethernet1/1          ! to leaf1
   no switchport
+  medium p2p
   ip address 10.1.1.0/31
   no shutdown
 interface Ethernet1/2          ! to leaf2
   no switchport
+  medium p2p
   ip address 10.1.1.2/31
   no shutdown
 ! Eth1/3 -> 10.1.1.4/31 (leaf3), Eth1/4 -> 10.1.1.6/31 (leaf4)
@@ -105,13 +107,17 @@ interface Ethernet1/2          ! to leaf2
 ! leaf1
 interface Ethernet1/1          ! to spine1
   no switchport
+  medium p2p
   ip address 10.1.1.1/31
   no shutdown
 interface Ethernet1/2          ! to spine2
   no switchport
+  medium p2p
   ip address 10.1.2.1/31
   no shutdown
 ```
+
+`medium p2p` marks each link as point-to-point. It skips ARP on a link that only ever has one neighbor, which speeds convergence.
 
 ### 4. BGP underlay
 

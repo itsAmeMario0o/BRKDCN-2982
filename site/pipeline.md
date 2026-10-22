@@ -49,6 +49,8 @@ A self-hosted runner attached to a public repository is a known hazard: a fork c
 
 The apply model is full continuous delivery: a push to `main` runs `terraform init`, `plan`, and `apply`, then `ansible-playbook`, then pyATS, with no manual gate. pyATS runs after the apply and fails the build loudly if the fabric is wrong. When the switch console is not reachable, the pyATS step reports a clean skip rather than failing the apply for the wrong reason.
 
+The fabric lane is still a work in progress. The Terraform and Ansible models do not yet apply cleanly to the current topology, so the fabric is built by hand today. The CLI on the [underlay]({{ '/underlay/' | relative_url }}) and [overlay]({{ '/overlay/' | relative_url }}) pages is the current source of truth. The cluster lane (Argo CD) works end to end.
+
 See ADR [0003](https://github.com/{{ site.repo.owner }}/{{ site.repo.name }}/tree/{{ site.repo.branch }}/docs/decisions) for the full trade-off, including the one-click gate that is the obvious upgrade path if the no-gate choice changes.
 
 ## The docs lane
