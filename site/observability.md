@@ -8,9 +8,9 @@ summary: Two signals reach Splunk: cluster logs and metrics through an OpenTelem
 
 ## The idea
 
-The cluster sends two signals to Splunk, and together they answer two different questions. Cluster logs and metrics answer "what is the cluster doing?" Network flows answer "what is talking to what, and did policy allow it?" Both ride one pipeline into Splunk, and both land under their own index and sourcetype so a search can tell them apart.
+The cluster sends two signals to Splunk, and together they answer two different questions. Cluster logs and metrics answer "what is the cluster doing?" Network flows answer "what is talking to what, and did policy allow it?" Both signals use one pipeline into Splunk, and both arrive under their own index and sourcetype so a search can separate them.
 
-The second signal is the one that closes the loop with the rest of the lab. Hubble watches the same extended Berkeley Packet Filter (eBPF) datapath that enforces network policy, so a drop you configured on the [use cases]({{ '/use-cases/' | relative_url }}) page shows up here as a dropped flow. The enforcement and the evidence come from the same place.
+The second signal connects the observability layer to the rest of the lab. Hubble observes the same extended Berkeley Packet Filter (eBPF) datapath that enforces network policy, so a drop you configured on the [use cases]({{ '/use-cases/' | relative_url }}) page shows up here as a dropped flow. The enforcement and the evidence come from the same place.
 
 <figure class="diagram" role="img" aria-label="Two signals leave the Kubernetes cluster and reach Splunk. The Splunk OpenTelemetry Collector runs as a per-node agent plus a cluster receiver and sends logs and metrics to the Splunk HTTP Event Collector. Separately, a Hubble exporter Deployment runs hubble observe and writes flow JSON to its standard output, which the same OpenTelemetry log pipeline carries to the HTTP Event Collector. Hubble Relay and Hubble UI stay inside the cluster for a live service map.">
 <svg viewBox="0 0 660 330" style="max-width:100%;height:auto">
@@ -57,30 +57,30 @@ The second signal is the one that closes the loop with the rest of the lab. Hubb
 
 ## Cluster logs and metrics
 
-The Splunk OpenTelemetry (OTel) Collector handles the first signal. It runs as a DaemonSet, one agent pod on every node, plus a separate cluster receiver for cluster-wide objects. The agent collects each node's container logs and node and pod metrics; the cluster receiver collects events and the state of Kubernetes objects.
+The Splunk OpenTelemetry (OTel) Collector handles the first signal. The Collector runs as a DaemonSet, one agent pod on every node, plus a separate cluster receiver for cluster-wide objects. The agent collects each node's container logs and node and pod metrics; the cluster receiver collects events and the state of Kubernetes objects.
 
-Everything it gathers goes to the Splunk HTTP Event Collector (HEC), the token-authenticated HTTP endpoint Splunk exposes for ingest. The Collector is the only component that holds the HEC token.
+Everything it gathers goes to the Splunk HTTP Event Collector (HEC), the token-authenticated HTTP endpoint that Splunk exposes for ingest. The Collector is the only component that holds the HEC token.
 
 ## Network flows
 
-The second signal comes from Hubble, the flow-visibility layer built into the Cilium container network interface (CNI). Because Cilium forwards and filters with eBPF, it already sees every packet, and Hubble turns that into a stream of flow records. Each record names the source and destination identity, the port, and the policy verdict, so a flow is not just "A reached B" but "A reached B, and policy allowed it" or "policy dropped it."
+The second signal comes from Hubble, the flow-visibility layer built into the Cilium container network interface (CNI). Because Cilium forwards and filters with eBPF, it already processes every packet, and Hubble turns that into a stream of flow records. Each record includes the source and destination identity, the port, and the policy verdict, so a flow is not just "A reached B" but "A reached B, and policy allowed it" or "policy dropped it."
 
-A small exporter Deployment turns that stream into something the pipeline can carry. It runs:
+A small exporter Deployment turns that stream into something the pipeline can carry. The Deployment runs:
 
 ```bash
 hubble observe --follow -o jsonpb
 ```
 
-That command streams every flow as JSON on standard output. The exporter writes nothing else and keeps no token. Its standard output is just container log lines, so the OTel agent already tailing that node picks them up and carries them over the same pipeline into Splunk. One token, in the Collector, covers both signals.
+That command streams every flow as JSON on standard output. The exporter writes nothing else and keeps no token. Its standard output is container log lines, so the OTel agent already tailing that node picks them up and carries them over the same pipeline into Splunk. One token, in the Collector, covers both signals.
 
 <div class="callout">
 <strong>Why the exporter holds no secret.</strong>
-The flow records reach Splunk as ordinary container logs, not as a second direct push. The exporter only prints; the OTel agent does the sending. That keeps the HEC token in one place and leaves nothing sensitive in the exporter's configuration.
+The flow records reach Splunk as ordinary container logs, not as a second direct push. The exporter only prints; the OTel agent does the sending. This arrangement keeps the HEC token in one place and leaves nothing sensitive in the exporter's configuration.
 </div>
 
 ## Hubble locally
 
-Flows are also useful without leaving the cluster. Hubble Relay aggregates the per-node flow streams into one cluster-wide view, and Hubble UI draws a live service map from it, the real graph of which workload is talking to which, updating as traffic moves.
+Flows are also useful without leaving the cluster. Hubble Relay aggregates the per-node flow streams into one cluster-wide view. Hubble UI draws a live service map from that view, the graph of which workload is talking to which, and updates it as traffic moves.
 
 Reach the UI with a port-forward rather than exposing a service:
 
@@ -100,11 +100,11 @@ index=k8s sourcetype=cilium:hubble:flows
 | stats count by verdict
 ```
 
-This is where the loop closes. When use case 1 applies a network policy that blocks `demo/frontend` from reaching `demo/database`, that blocked attempt appears here as a DROPPED flow between those two identities. The policy you wrote and the drop you can see are the same event, observed from the eBPF datapath that enforced it.
+The flow records connect the policy to its evidence. When use case 1 applies a network policy that blocks `demo/frontend` from reaching `demo/database`, that blocked attempt appears here as a DROPPED flow between those two identities. The policy you wrote and the drop you can see are the same event, observed from the eBPF datapath that enforced it.
 
 ## Why it matters
 
-The question operators actually ask is "why was this blocked?" Here it has a visible answer. The datapath that enforces policy is the datapath Hubble observes, so a drop is never a guess; it is a flow record with a verdict and the two identities on it. Hubble UI shows it live, and Splunk keeps the history, so the same answer is there an hour later when someone asks what happened.
+The question operators ask is "why was this blocked?" The answer is visible here. The datapath that enforces policy is the datapath that Hubble observes, so a drop is never a guess; it is a flow record with a verdict and the two identities on it. Hubble UI shows it live, and Splunk keeps the history, so the same answer is there an hour later when someone asks what happened.
 
 ## Verify
 
@@ -124,4 +124,4 @@ kubectl -n kube-system get pods -l k8s-app=hubble-exporter
 kubectl -n kube-system port-forward svc/hubble-ui 12000:80
 ```
 
-If the verdict search returns both FORWARDED and DROPPED counts, both halves are proven: the OTel pipeline is carrying flows, and the eBPF datapath is reporting its policy decisions all the way through to Splunk.
+If the verdict search returns both FORWARDED and DROPPED counts, both halves are proven: the OTel pipeline is carrying flows, and the eBPF datapath is reporting its policy decisions through to Splunk.

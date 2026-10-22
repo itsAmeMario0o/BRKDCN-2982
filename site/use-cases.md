@@ -32,7 +32,7 @@ Each use case is self-contained: a short summary, the features it shows, the man
   </li>
 </ul>
 
-Use case 3 is the reason the lab exists. Use cases 1 and 2 are things any Cilium cluster can do; use case 3 is what makes this a fabric lab rather than a single-cluster one. If you read only one, read that one.
+Use case 3 is the reason the lab exists. Use cases 1 and 2 are things that any Cilium cluster can do; use case 3 is what makes this a fabric lab rather than a single-cluster one. If you read only one, read that one.
 
 <div class="callout">
 <strong>Prerequisites.</strong>
@@ -43,7 +43,7 @@ All three assume the cluster is up: Cilium as the CNI (Container Network Interfa
 
 Default-deny a namespace, then open exactly the paths the app needs, first at L3/L4 (the network and transport layers), then at L7 (the application layer), by HTTP (Hypertext Transfer Protocol) method and path.
 
-Cilium enforces policy in eBPF (extended Berkeley Packet Filter) at the pod's network interface, so this works the same whether the two pods land on the same node or on nodes hanging off different leaves in the fabric.
+Cilium enforces policy in eBPF (extended Berkeley Packet Filter) at the pod's network interface, so enforcement works the same whether the two pods land on the same node or on nodes attached to different leaves in the fabric.
 
 **What it shows**
 
@@ -53,7 +53,7 @@ Cilium enforces policy in eBPF (extended Berkeley Packet Filter) at the pod's ne
 - DNS-aware egress (DNS, the Domain Name System) with `toFQDNs`: allow one external name and nothing else.
 - A cluster-wide deny that holds across every namespace.
 
-The first two policies are standard Kubernetes `NetworkPolicy`, portable across any CNI. The rest are `CiliumNetworkPolicy` and one `CiliumClusterwideNetworkPolicy`, which add the L7, DNS, and cluster-wide behavior standard policy cannot express.
+The first two policies are standard Kubernetes `NetworkPolicy`, portable across any CNI. The rest are `CiliumNetworkPolicy` and one `CiliumClusterwideNetworkPolicy`, which add the L7, DNS, and cluster-wide behavior that standard policy cannot express.
 
 **The demo app**
 
@@ -122,7 +122,7 @@ Source: [`use-cases/01-network-policies/`](https://github.com/{{ site.repo.owner
 
 Turn on Hubble and watch the flows: every connection, every policy verdict, and a live service map, without touching the application.
 
-Hubble is Cilium's observability layer. It reads the same eBPF data path that enforces policy in use case 1, so "why was this dropped?" has an answer you can see rather than guess. Hubble is not extra infrastructure to stand up. It is `hubble-relay` and `hubble-ui`, two small pods you enable on the Cilium install you already have.
+Hubble is Cilium's observability layer. Hubble reads the same eBPF data path that enforces policy in use case 1, so "why was this dropped?" has an answer you can see rather than guess. Hubble is not extra infrastructure to stand up. Hubble runs as `hubble-relay` and `hubble-ui`, two small pods you enable on the Cilium install you already have.
 
 **Key features**
 
@@ -174,7 +174,7 @@ Source: [`use-cases/02-hubble/`](https://github.com/{{ site.repo.owner }}/{{ sit
 
 ## Use case 3: Cilium BGP
 
-Advertise pod CIDRs (Classless Inter-Domain Routing ranges) out of the cluster over eBGP (external BGP), let the leaves re-originate them as EVPN (Ethernet VPN) Type-5 routes, and reach a pod from anywhere on the physical fabric. This is the use case the lab is built for, and it has a page of its own: [Cilium BGP]({{ '/cilium-bgp/' | relative_url }}) walks through the three CRDs (custom resource definitions), the path a pod prefix takes, and the fabric-side verification.
+Advertise pod CIDRs (Classless Inter-Domain Routing ranges) out of the cluster over eBGP (external BGP), let the leaves re-originate them as EVPN (Ethernet VPN) Type-5 routes, and reach a pod from anywhere on the physical fabric. Use case 3 is the one that the lab is built for, and it has a page of its own: [Cilium BGP]({{ '/cilium-bgp/' | relative_url }}) walks through the three CRDs (custom resource definitions), the path a pod prefix takes, and the fabric-side verification.
 
 ```
 pod (10.244.x.0/24)

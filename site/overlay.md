@@ -8,7 +8,7 @@ summary: Lay the EVPN overlay and VXLAN on the underlay, in order. Features, EVP
 
 The overlay rides on the underlay from the previous page, so build the underlay first. The overlay adds two things: a BGP (Border Gateway Protocol) EVPN (Ethernet VPN) control plane for the spines to reflect, and VXLAN (Virtual Extensible LAN) tunnels between the leaves to carry tenant traffic.
 
-The result is a symmetric IRB (integrated routing and bridging) fabric. One tenant VRF (virtual routing and forwarding), `tenant1`, with an L3 VNI (VXLAN network identifier). Two Layer 2 segments, red and blue, each with a distributed anycast gateway. A host keeps the same gateway on any leaf, and red talks to blue by routing across the L3 VNI rather than bridging.
+The result is a symmetric IRB (integrated routing and bridging) fabric. One tenant VRF (virtual routing and forwarding), `tenant1`, with an L3 VNI (VXLAN network identifier). Two Layer 2 segments, red and blue, each with a distributed anycast gateway. A host keeps the same gateway on any leaf, and red reaches blue by routing across the L3 VNI rather than bridging.
 
 <figure class="diagram" role="img" aria-label="Leaves are VTEPs. The EVPN control plane runs through the spine route reflectors. A vPC leaf pair shares one anycast VTEP address, so the fabric sees the pair as a single next hop.">
 <svg viewBox="0 0 660 320" style="max-width:100%;height:auto">
@@ -49,11 +49,11 @@ The result is a symmetric IRB (integrated routing and bridging) fabric. One tena
 
 Anycast gateway MAC is `0000.0000.1234`, the same fabric-wide. The VTEP sources from loopback1. EVPN runs as iBGP `l2vpn evpn` with the spines as route reflectors.
 
-Each L2 VNI maps to one multicast group in the `239.0.0.0/8` range the underlay reserved for the rendezvous point. The L3 VNI needs no group. It is a routed transit segment between VTEPs and carries no broadcast. The node subnets, VLANs 50 and 51, are where the Kubernetes nodes attach. The [Cilium BGP]({{ '/cilium-bgp/' | relative_url }}) page builds on them.
+Each L2 VNI maps to one multicast group in the `239.0.0.0/8` range that the underlay reserved for the rendezvous point. The L3 VNI requires no group, because it is a routed transit segment between VTEPs and carries no broadcast. The node subnets, VLANs 50 and 51, are where the Kubernetes nodes attach. The [Cilium BGP]({{ '/cilium-bgp/' | relative_url }}) page builds on them.
 
 ## How a packet crosses the fabric
 
-Symmetric IRB moves traffic between two subnets on two different leaves in a fixed sequence: bridge, route, route, bridge. The L2 VNIs stay local to each leaf. The routing between them happens over the L3 VNI, a transit segment that only the VTEPs see.
+Symmetric IRB moves traffic between two subnets on two different leaves in a fixed sequence: bridge, route, route, bridge. The L2 VNIs stay local to each leaf. The routing between them happens over the L3 VNI, a transit segment that only the VTEPs use.
 
 <figure class="diagram" role="img" aria-label="A packet from a red host on leaf1 is bridged to leaf1, routed into the L3 VNI, carried over VXLAN to leaf4, routed out, and bridged to a blue host. The L3 VNI is the transit segment between the two VTEPs.">
 <svg viewBox="0 0 700 220" style="max-width:100%;height:auto">
@@ -128,7 +128,7 @@ Order matters here. `feature nv overlay` has to come before `nv overlay evpn`. R
 
 ### 2. Spines as EVPN route reflectors
 
-Each spine reflects `l2vpn evpn` routes between the leaves and keeps all route targets so it does not need per-tenant config.
+Each spine reflects `l2vpn evpn` routes between the leaves and keeps all route targets, so it requires no per-tenant configuration.
 
 ```nxos
 ! spine1 (spine2 is identical)
@@ -186,11 +186,11 @@ interface Vlan200                ! blue anycast gateway
   no ip redirects
 ```
 
-The L3 VNI SVI (switched virtual interface) carries no IP address. The SVI is the routing anchor for the tenant VRF, so it needs `ip forward` and `no ip redirects` and nothing else. The anycast gateway SVIs take `no ip redirects` as well, since the gateway address is identical on every leaf and a redirect would point nowhere useful.
+The L3 VNI SVI (switched virtual interface) carries no IP address. The SVI is the routing anchor for the tenant VRF, so it requires `ip forward` and `no ip redirects` and nothing else. The anycast gateway SVIs take `no ip redirects` as well, since the gateway address is identical on every leaf and a redirect would point nowhere useful.
 
 ### 4. The VTEP and the EVPN instances
 
-The NVE (network virtualization edge) interface is where the leaf encapsulates and decapsulates VXLAN. It sources from loopback1 and carries the L3 VNI plus the L2 VNIs. BGP still handles host and MAC reachability. Broadcast traffic rides the multicast tree the underlay built, so each L2 VNI binds to a `mcast-group` rather than listing every remote VTEP for head-end replication.
+The NVE (network virtualization edge) interface is where the leaf encapsulates and decapsulates VXLAN. The interface sources from loopback1 and carries the L3 VNI plus the L2 VNIs. BGP still handles host and MAC reachability. Broadcast traffic rides the multicast tree that the underlay built, so each L2 VNI binds to a `mcast-group` rather than listing every remote VTEP for head-end replication.
 
 ```nxos
 ! leaf
@@ -227,7 +227,7 @@ evpn
     route-target export auto
 ```
 
-The L3 VNI keeps `associate-vrf` and binds to no group. Only the L2 VNIs carry broadcast, so only they need a multicast group. Each leaf binds the same VNI to the same group, which is how their trees line up at the rendezvous point.
+The L3 VNI keeps `associate-vrf` and binds to no group. Only the L2 VNIs carry broadcast, so only they require a multicast group. Each leaf binds the same VNI to the same group, which is how their trees line up at the rendezvous point.
 
 ### 5. Leaf BGP: EVPN to the spines, advertise the tenant
 
@@ -303,7 +303,7 @@ show nve vni                    ! the L2 VNIs with their mcast groups, and the L
 show vpc brief                  ! peer adjacency and consistency, the vPC up
 ```
 
-Red reaching blue is the proof the overlay works. The two hosts sit in different subnets on different leaves, and the traffic routes across the L3 VNI rather than bridging.
+Red reaching blue is the proof that the overlay works. The two hosts sit in different subnets on different leaves, and the traffic routes across the L3 VNI rather than bridging.
 
 <div class="callout">
 <strong>On automation.</strong>

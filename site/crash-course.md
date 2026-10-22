@@ -26,7 +26,7 @@ On leaf1:
 show ip bgp summary
 ```
 
-**Why.** The whole fabric runs one autonomous system (AS), 65400, with the spines as Border Gateway Protocol (BGP) route reflectors. Internal BGP alone bootstraps loopback reachability, so the design needs no OSPF and no IS-IS. Fewer protocols mean fewer failure modes. See [Underlay]({{ '/underlay/' | relative_url }}).
+**Why.** The whole fabric runs one autonomous system (AS), 65400, with the spines as Border Gateway Protocol (BGP) route reflectors. Internal BGP alone bootstraps loopback reachability, so the fabric uses no OSPF and no IS-IS. Fewer protocols mean fewer failure modes. See [Underlay]({{ '/underlay/' | relative_url }}).
 
 ## 2. VXLAN overlay
 
@@ -58,7 +58,7 @@ show vpc brief        ! leaf3: the pair shares one anycast VTEP
 show ip pim rp        ! spine: the anycast rendezvous point
 ```
 
-**Why.** A virtual port channel (vPC) makes a leaf pair one logical next hop for a dual-homed host, so either leaf can forward its traffic. Broadcast traffic rides on multicast here, and the anycast rendezvous point (RP) gives that multicast a redundant meeting point that both spines share.
+**Why.** A virtual port channel (vPC) makes a leaf pair one logical next hop for a dual-homed host, so either leaf can forward its traffic. Broadcast traffic uses multicast here, and the anycast rendezvous point (RP) gives that multicast a redundant meeting point that both spines share.
 
 ## 5. The cluster
 
@@ -110,7 +110,7 @@ On leaf3:
 show bgp l2vpn evpn | include 10.244
 ```
 
-**Why.** The node advertises its pod CIDR (classless inter-domain routing block) over BGP, and the leaf re-originates it as an EVPN Type-5 route. The pod network becomes an ordinary route in the fabric, reachable across VXLAN, with no tunnel to the host and no static routes. This is the core result of the lab.
+**Why.** The node advertises its pod CIDR (classless inter-domain routing block) over BGP, and the leaf re-originates it as an EVPN Type-5 route. The pod network becomes an ordinary route in the fabric, reachable across VXLAN, with no tunnel to the host and no static routes. This path is the core result of the lab.
 
 ## 9. Egress gateway, identity at the firewall
 
@@ -133,9 +133,9 @@ show xlate | include 10.0.51.100
 cilium hubble ui
 ```
 
-Open the `hubble_fabric_observability` dashboard in Splunk. The verdict breakdown is a built-in panel, so no search is needed.
+Open the `hubble_fabric_observability` dashboard in Splunk. The verdict breakdown is a built-in panel, so you run no search.
 
-**Why.** Hubble gives real-time flow visibility, and Splunk keeps the history and the dashboards a security team already uses. One exporter ships Hubble flows into the same OpenTelemetry (OTel) pipeline that carries cluster logs and metrics. The Flow verdicts panel shows FORWARDED against DROPPED, and a use-case-1 drop appears there, which closes the loop from enforcement to observability. See [Observability]({{ '/observability/' | relative_url }}).
+**Why.** Hubble gives real-time flow visibility, and Splunk keeps the history and the dashboards that a security team already uses. One exporter ships Hubble flows into the same OpenTelemetry (OTel) pipeline that carries cluster logs and metrics. The Flow verdicts panel shows FORWARDED against DROPPED, and a use-case-1 drop appears there, which connects enforcement to observability. See [Observability]({{ '/observability/' | relative_url }}).
 
 ## 11. GitOps, why it stays applied
 

@@ -10,15 +10,15 @@ summary: One autonomous system for the whole fabric, a cluster that is its own A
 
 Six Nexus switches make the fabric: two spines and four leaves. Everything runs in a single BGP (Border Gateway Protocol) autonomous system (AS), 65400. There is no OSPF and no IS-IS. The underlay is iBGP over the point-to-point links, with the spines as route-reflectors, and that is enough to bootstrap reachability between every switch loopback.
 
-On top of the underlay the leaves run a `l2vpn evpn` overlay and VXLAN (Virtual Extensible LAN). Host subnets live behind distributed anycast gateways, so a server keeps the same gateway address wherever it attaches. Two of the leaves form a vPC (virtual Port Channel) pair and present a shared anycast tunnel endpoint, so the pair looks like a single next hop.
+On top of the underlay the leaves run a `l2vpn evpn` overlay and VXLAN (Virtual Extensible LAN). Host subnets sit behind distributed anycast gateways, so a server keeps the same gateway address wherever it attaches. Two of the leaves form a vPC (virtual Port Channel) pair and present a shared anycast tunnel endpoint, so the pair looks like a single next hop.
 
-Off to one side is a Kubernetes cluster running Cilium. The cluster is its own autonomous system, 65001, and peers the leaves over eBGP. This is the BRKDCN-2982 "AS-per-cluster" model, and it is the reason a leaf can take a pod prefix learned over eBGP and re-originate it into EVPN (Ethernet VPN).
+Off to one side is a Kubernetes cluster running Cilium. The cluster is its own autonomous system, 65001, and peers the leaves over eBGP. This peering is the BRKDCN-2982 "AS-per-cluster" model, and it is the reason a leaf can take a pod prefix learned over eBGP and re-originate it into EVPN (Ethernet VPN).
 
 {% include overview-diagram.html %}
 
 ## Why a single AS
 
-A single-AS design keeps the fabric quiet. Because every switch shares one AS number, the usual eBGP workarounds disappear. There is no `allowas-in`, no `disable-peer-as-check`, and no next-hop rewriting route-map to maintain. The spines advertise their connected point-to-point `/31` networks so a leaf can resolve another leaf's loopback next hop, and the iBGP sessions carry the loopback routes the overlay needs.
+A single-AS design keeps the fabric quiet. Because every switch shares one AS number, the usual eBGP workarounds disappear. There is no `allowas-in`, no `disable-peer-as-check`, and no next-hop rewriting route-map to maintain. The spines advertise their connected point-to-point `/31` networks so a leaf can resolve another leaf's loopback next hop, and the iBGP sessions carry the loopback routes that the overlay requires.
 
 | Plane | What carries it | Role of the spines |
 |---|---|---|
@@ -30,12 +30,12 @@ A single-AS design keeps the fabric quiet. Because every switch shares one AS nu
 
 <div class="phase">
   <h3><span class="step-num">S</span> Spines</h3>
-  <p>Two spines, pure transit and reflection. They reflect both the underlay IPv4 routes and the overlay EVPN routes, and they advertise their connected point-to-point links so next-hop resolution works across the fabric. They terminate no hosts.</p>
+  <p>Two spines handle transit and reflection. They reflect both the underlay IPv4 routes and the overlay EVPN routes, and they advertise their connected point-to-point links so next-hop resolution works across the fabric. They terminate no hosts.</p>
 </div>
 
 <div class="phase">
   <h3><span class="step-num">L</span> Leaves</h3>
-  <p>Four leaves, each a VXLAN tunnel endpoint (VTEP). They own the distributed anycast gateway for the tenant subnets, carry the tenant VRF (virtual routing and forwarding), and sit on the seam: IPv4 unicast toward hosts and clusters, <code>l2vpn evpn</code> toward the fabric. A leaf is where a pod prefix learned over eBGP becomes an EVPN Type-5 route.</p>
+  <p>Four leaves each act as a VXLAN tunnel endpoint (VTEP). They own the distributed anycast gateway for the tenant subnets, carry the tenant VRF (virtual routing and forwarding), and sit on the seam: IPv4 unicast toward hosts and clusters, <code>l2vpn evpn</code> toward the fabric. A leaf is where a pod prefix learned over eBGP becomes an EVPN Type-5 route.</p>
 </div>
 
 <div class="phase">
@@ -78,7 +78,7 @@ A single-AS design keeps the fabric quiet. Because every switch shares one AS nu
 
 ## The tenant, in numbers
 
-The overlay builds a symmetric integrated routing and bridging (IRB) fabric for one tenant with two subnets. The values below are the reference design; they are the same ones the Ansible data model ships with.
+The overlay builds a symmetric integrated routing and bridging (IRB) fabric for one tenant with two subnets. The values below are the reference design; they are the same ones that the Ansible data model ships with.
 
 | Object | Value |
 |---|---|
@@ -93,7 +93,7 @@ Because `red` and `blue` route to each other across the fabric over the Layer 3 
 
 ## How a node attaches
 
-A node does not plug into a single leaf. It dual-homes into a vPC pair over one bonded link and peers the pair over eBGP to advertise its pod CIDR.
+A node does not attach to a single leaf. The node dual-homes into a vPC pair over one bonded link and peers the pair over eBGP to advertise its pod CIDR.
 
 <figure class="diagram" role="img" aria-label="A Kubernetes node dual-homes into a vPC pair of two leaves. One bonded link splits to both leaves, which share an anycast tunnel endpoint, and the node peers the pair over eBGP.">
 <svg viewBox="0 0 520 300" style="max-width:100%;height:auto">
@@ -165,9 +165,9 @@ Inside the node, that bond is one of two network paths. The bonded pair carries 
 
 ## The seam, stated plainly
 
-The cluster speaks plain eBGP. It neither knows nor cares that the fabric is EVPN. The leaf does the translation: it learns the pod prefix as an ordinary IPv4 route in the tenant VRF, then re-originates it as an EVPN Type-5 (IP prefix) route. The spines reflect that route to every other leaf, and any tunnel endpoint can now forward to the pod across VXLAN.
+The cluster speaks plain eBGP and carries no EVPN configuration. The leaf does the translation: it learns the pod prefix as an ordinary IPv4 route in the tenant VRF, then re-originates it as an EVPN Type-5 (IP prefix) route. The spines reflect that route to every other leaf, and any tunnel endpoint can now forward to the pod across VXLAN.
 
-That one seam is what makes this a Nexus and Isovalent lab, not a single-cluster one. The next pages build the lab from the bottom up: the [underlay]({{ '/underlay/' | relative_url }}) first, then the [overlay and vPC]({{ '/overlay/' | relative_url }}), then the [Cilium peering]({{ '/cilium-bgp/' | relative_url }}) that lights up the whole chain.
+That one seam is what makes this a Nexus and Isovalent lab, not a single-cluster one. The next pages build the lab from the bottom up: the [underlay]({{ '/underlay/' | relative_url }}) first, then the [overlay and vPC]({{ '/overlay/' | relative_url }}), then the [Cilium peering]({{ '/cilium-bgp/' | relative_url }}) that completes the whole chain.
 
 <div class="callout">
 <strong>Design records.</strong>

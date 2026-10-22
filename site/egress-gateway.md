@@ -8,11 +8,11 @@ summary: Send one app's internet egress through the firewall as a fixed source I
 
 ## The problem
 
-A firewall can only govern what it can name, and a pod is the wrong thing to name. A pod draws its IP from the cluster's own CIDR (Classless Inter-Domain Routing) range, that address changes on every restart, and the firewall never sees it in any case: before a packet leaves the node, the node masquerades pod traffic, rewriting the source to its own address. A policy keyed on "this app" has nothing stable to match.
+A firewall rule can match only an address, and a pod address is the wrong one to match. A pod draws its IP from the cluster's own CIDR (Classless Inter-Domain Routing) range, and that address changes on every restart. The firewall never receives it in any case. Before a packet leaves the node, the node masquerades pod traffic and rewrites the source to the node's own address. A policy keyed on "this app" has nothing stable to match.
 
 The fix is to give the app one fixed, routable source address and send its egress through the firewall. Cilium egress gateway pins the address. The fabric and a policy route carry it to the firewall. A rule keyed on that single IP then governs the whole app, wherever its pods run.
 
-This is a Cilium use case that needs the fabric underneath, like [Cilium BGP]({{ '/cilium-bgp/' | relative_url }}). The pod prefixes already reach the fabric as EVPN (Ethernet VPN) Type-5 routes. Egress gateway adds a return path for selected traffic: out through a border node, across the fabric, to the firewall at the edge.
+Egress gateway is a Cilium use case that requires the fabric underneath, like [Cilium BGP]({{ '/cilium-bgp/' | relative_url }}). The pod prefixes already reach the fabric as EVPN (Ethernet VPN) Type-5 routes. Egress gateway adds a return path for selected traffic: out through a border node, across the fabric, to the firewall at the edge.
 
 ## The path
 
@@ -63,21 +63,21 @@ This is a Cilium use case that needs the fabric underneath, like [Cilium BGP]({{
   <polyline points="215,110 215,132 100,132 100,226" stroke="currentColor" stroke-width="1" fill="none" opacity="0.45" stroke-dasharray="5 4" marker-end="url(#eg-arrow)"/>
   <text x="128" y="126" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.6">node default</text>
 </svg>
-<figcaption>The app pod runs on the control-plane node, but its egress is pinned to the worker. The worker source-NATs it to 10.0.51.100 and a policy route sends that address over the fabric to the firewall, which matches a rule on 10.0.51.100 before forwarding to the internet. The node's own management traffic takes the out-of-band path and never reaches the firewall.</figcaption>
+<figcaption>The app pod runs on the control-plane node, but its egress is pinned to the worker. The worker source-NATs it to 10.0.51.100, and a policy route sends that address over the fabric to the firewall. The firewall matches a rule on 10.0.51.100 before forwarding to the internet. The node's own management traffic takes the out-of-band path and never reaches the firewall.</figcaption>
 </figure>
 
 ## Build order
 
 ### 1. Turn on egress gateway in Cilium
 
-Egress gateway rides on Cilium's eBPF (extended Berkeley Packet Filter) masquerade path, so turn both settings on together and let the agents restart.
+Egress gateway uses Cilium's eBPF (extended Berkeley Packet Filter) masquerade path, so turn both settings on together and let the agents restart.
 
 ```bash
 helm upgrade cilium cilium/cilium -n kube-system --reuse-values \
   --set egressGateway.enabled=true --set bpf.masquerade=true
 ```
 
-One restart catch: the operator, not the agent, registers the egress policy custom resource definition (CRD). If the agents report `waiting for Cilium Operator to register CRD`, restart the operator too.
+There is one restart catch: the operator, not the agent, registers the egress policy custom resource definition (CRD). If the agents report `waiting for Cilium Operator to register CRD`, restart the operator too.
 
 ```bash
 kubectl -n kube-system rollout restart deploy/cilium-operator
@@ -85,7 +85,7 @@ kubectl -n kube-system rollout restart deploy/cilium-operator
 
 ### 2. Pin the egress IP on the gateway node
 
-The worker node is the gateway, because it attaches to the border leaf pair that reaches the firewall. Give its fabric interface, bond0, a second address, 10.0.51.100. That address is the identity the firewall will match.
+The worker node is the gateway, because it attaches to the border leaf pair that reaches the firewall. Give its fabric interface, bond0, a second address, 10.0.51.100. That address is the identity that the firewall matches.
 
 ```bash
 # on the worker node
@@ -94,7 +94,7 @@ ip address add 10.0.51.100/24 dev bond0
 
 ### 3. Steer that address to the firewall
 
-By default the node sends everything out its out-of-band interface, which does not reach the firewall. Only 10.0.51.100 should take the fabric. Policy routing splits the two: a rule matches the source address and sends it to a dedicated routing table, and that table's default route points at the fabric gateway, 10.0.51.1.
+By default the node sends everything out its out-of-band interface, which does not reach the firewall. Only 10.0.51.100 should take the fabric. Policy routing splits the two. A rule matches the source address and sends it to a dedicated routing table, and that table's default route points at the fabric gateway, 10.0.51.1.
 
 ```bash
 # on the worker node
@@ -102,11 +102,11 @@ ip rule add from 10.0.51.100 lookup 100
 ip route add default via 10.0.51.1 dev bond0 table 100
 ```
 
-Now the split is clean. Traffic sourced from 10.0.51.100 follows table 100 to the firewall. Everything else the node sends, including its management traffic, keeps the out-of-band default and never touches the firewall. Persist both the address and the rule in the node's network configuration so they survive a reboot.
+Now the split is clean. Traffic sourced from 10.0.51.100 follows table 100 to the firewall. Everything else the node sends, including its management traffic, keeps the out-of-band default and never reaches the firewall. Persist both the address and the rule in the node's network configuration so they survive a reboot.
 
 ### 4. Write the egress policy
 
-The `CiliumEgressGatewayPolicy` ties it together: which pods it selects, which node is the gateway, and which source IP to use. This selects pods labeled `app: egress-demo`, routes their internet-bound traffic through the worker, and sources it from 10.0.51.100.
+The `CiliumEgressGatewayPolicy` defines three things: which pods it selects, which node is the gateway, and which source IP to use. The policy selects pods labeled `app: egress-demo`, routes their internet-bound traffic through the worker, and sources it from 10.0.51.100.
 
 ```yaml
 apiVersion: cilium.io/v2
@@ -130,7 +130,7 @@ spec:
     egressIP: 10.0.51.100
 ```
 
-The `excludedCIDRs` matter. Without them, the gateway also captures pod-to-pod traffic inside the fabric and the cluster's own management traffic, then masquerades both and breaks them. The policy should catch only traffic that is genuinely leaving for the internet.
+The `excludedCIDRs` matter. Without them, the gateway also captures pod-to-pod traffic inside the fabric and the cluster's own management traffic. The gateway then masquerades both and breaks them. The policy should catch only traffic that is leaving for the internet.
 
 ## Verify
 
@@ -153,7 +153,7 @@ That one line is the proof. The app's packets reach the firewall carrying 10.0.5
 
 <div class="callout callout-warning">
 <strong>This path proves control, not throughput.</strong>
-The firewall in this lab runs unlicensed, which caps its forwarding at roughly 100 Kbps. That is enough to prove the app egresses through the firewall as 10.0.51.100 and that a rule governs it. It is not a path for bulk traffic. Telemetry and other high-volume flows stay on the out-of-band network, which the policy deliberately excludes.
+The firewall in this lab runs unlicensed, which caps its forwarding at roughly 100 Kbps. That cap is enough to prove the app egresses through the firewall as 10.0.51.100 and that a rule governs it. The path is not meant for bulk traffic. Telemetry and other high-volume flows stay on the out-of-band network, which the policy deliberately excludes.
 </div>
 
 <div class="callout">

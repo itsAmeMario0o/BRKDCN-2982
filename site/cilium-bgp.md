@@ -10,11 +10,11 @@ summary: The cluster becomes its own autonomous system and advertises pod CIDRs 
 
 Advertise pod CIDRs (Classless Inter-Domain Routing blocks) out of the cluster over eBGP (external BGP, Border Gateway Protocol), let the leaves re-originate them as EVPN (Ethernet VPN) Type-5 routes, and reach a pod from anywhere on the physical fabric. There is no overlay tunnel to the host and no static routes. The pod network is just another prefix in the fabric's routing table.
 
-This is the use case the lab is built for. The two [other use cases]({{ '/use-cases/' | relative_url }}) run on any Cilium cluster. This one needs a real spine-leaf fabric underneath, which is exactly what the [underlay]({{ '/underlay/' | relative_url }}) and [overlay]({{ '/overlay/' | relative_url }}) stand up.
+Cilium BGP is the use case that the lab is built for. The two [other use cases]({{ '/use-cases/' | relative_url }}) run on any Cilium cluster. This use case requires a real spine-leaf fabric underneath, which is exactly what the [underlay]({{ '/underlay/' | relative_url }}) and [overlay]({{ '/overlay/' | relative_url }}) stand up.
 
 {% include overview-diagram.html cluster_as=true %}
 
-Three autonomous systems (AS) meet here. The fabric is one AS (65400), the cluster is its own (65001), and the border runs a third (65500) out to the firewall. Each node holds an eBGP session to the leaf it attaches to, and that session is the whole seam: the node advertises its PodCIDR southbound, the leaf re-originates it as EVPN northbound.
+Three autonomous systems (AS) meet here. The fabric is one AS (65400), the cluster is its own (65001), and the border runs a third (65500) out to the firewall. Each node holds an eBGP session to the leaf that it attaches to. That session is the whole seam: the node advertises its PodCIDR southbound, and the leaf re-originates it as EVPN northbound.
 
 ## The path a pod prefix takes
 
@@ -28,11 +28,11 @@ pod (10.244.x.0/24)
   -> any VTEP can now route to the pod across VXLAN
 ```
 
-The cluster speaks plain eBGP; it does not know or care that the fabric is EVPN. The leaf is the seam: BGP IPv4 unicast on the south side, `l2vpn evpn` on the north side.
+The cluster speaks plain eBGP and carries no EVPN configuration. The leaf is the seam: BGP IPv4 unicast on the south side, `l2vpn evpn` on the north side.
 
 ## What runs on a node
 
-Cilium runs one `cilium-agent` on every node, as a DaemonSet. The agent does three jobs at once. It is the CNI (Container Network Interface) plugin that wires each pod into the kernel. It compiles and loads the eBPF programs that forward and filter traffic, which is how Cilium replaces kube-proxy and the iptables path. And it runs an embedded BGP speaker that peers the leaf and advertises the node's PodCIDR. Pod traffic leaves the node natively, as routed IP. There is no VXLAN (Virtual Extensible LAN) tunnel from the node to the host.
+Cilium runs one `cilium-agent` on every node, as a DaemonSet. The agent does three jobs at once. First, the agent is the CNI (Container Network Interface) plugin that wires each pod into the kernel. Second, the agent compiles and loads the eBPF programs that forward and filter traffic, which is how Cilium replaces kube-proxy and the iptables path. Third, the agent runs an embedded BGP speaker that peers the leaf and advertises the node's PodCIDR. Pod traffic leaves the node natively, as routed IP. There is no VXLAN (Virtual Extensible LAN) tunnel from the node to the host.
 
 <figure class="diagram" role="img" aria-label="Each node runs cilium-agent, which programs the kernel eBPF datapath and runs an embedded BGP speaker. The speaker peers the leaf and advertises the PodCIDR. Pod traffic leaves the node as native routed IP through the NIC to the leaf.">
 <svg viewBox="0 0 640 320" style="max-width:100%;height:auto">
@@ -84,8 +84,8 @@ Cilium runs one `cilium-agent` on every node, as a DaemonSet. The agent does thr
 Cilium's BGP control plane uses three custom resources (CRDs, custom resource definitions). They live with the fabric config, in [`cilium/bgp.yaml`](https://github.com/{{ site.repo.owner }}/{{ site.repo.name }}/blob/{{ site.repo.branch }}/cilium/bgp.yaml).
 
 - `CiliumBGPClusterConfig` is the cluster's BGP speaker: local AS 65001, peering the leaf. There is one per node, because each node peers a different leaf address.
-- `CiliumBGPPeerConfig` sets timers, graceful restart, and which address families to carry. It is shared.
-- `CiliumBGPAdvertisement` says what to advertise: `PodCIDR`, and optionally LoadBalancer service IPs. It is shared.
+- `CiliumBGPPeerConfig` sets timers, graceful restart, and which address families to carry. This resource is shared.
+- `CiliumBGPAdvertisement` specifies what to advertise: `PodCIDR`, and optionally LoadBalancer service IPs. This resource is shared.
 
 A trimmed view of one node plus the shared objects:
 
@@ -133,7 +133,7 @@ spec:
 
 <div class="callout">
 <strong>Values track the live cluster.</strong>
-Node names and peer addresses match the cluster they run against. The authoritative values live in the applied <code>bgp.yaml</code>, not in this snippet.
+Node names and peer addresses match the cluster that they run against. The authoritative values live in the applied <code>bgp.yaml</code>, not in this snippet.
 </div>
 
 ## Run it
@@ -171,7 +171,7 @@ If the ping crosses the fabric, the whole chain is proven: Cilium advertised the
 
 <div class="callout callout-warning">
 <strong>Testing from a switch instead of a host?</strong>
-Always set an explicit, unique <code>source</code> on the ping, for example <code>ping &lt;remote&gt; vrf &lt;tenant&gt; source &lt;a per-leaf loopback in the VRF&gt;</code>. An unsourced VRF (virtual routing and forwarding) ping sources from the anycast gateway SVI (switched virtual interface), whose address is identical on every leaf, so the reply never comes back and a healthy fabric looks broken. Real pods have their own addresses and are not affected.
+Always set an explicit, unique <code>source</code> on the ping, for example <code>ping &lt;remote&gt; vrf &lt;tenant&gt; source &lt;a per-leaf loopback in the VRF&gt;</code>. An unsourced VRF (virtual routing and forwarding) ping sources from the anycast gateway SVI (switched virtual interface), whose address is identical on every leaf. The reply never comes back, and a healthy fabric looks broken. Real pods have their own addresses and are not affected.
 </div>
 
 Source: [`cilium/bgp.yaml`](https://github.com/{{ site.repo.owner }}/{{ site.repo.name }}/blob/{{ site.repo.branch }}/cilium/bgp.yaml).

@@ -6,9 +6,9 @@ eyebrow: Build
 summary: Build the single-AS iBGP underlay in order. Features, loopbacks, point-to-point links, BGP with the spines as route reflectors, then PIM for broadcast traffic.
 ---
 
-The underlay has two jobs: make every switch loopback reachable from every other switch, and carry the overlay's broadcast traffic. The overlay rides on top of both, so the underlay comes first.
+The underlay has two functions: make every switch loopback reachable from every other switch, and carry the overlay's broadcast traffic. The overlay rides on top of both, so the underlay comes first.
 
-The design is deliberately plain. One autonomous system (AS) for the whole fabric, 65400. iBGP (internal Border Gateway Protocol, BGP) over the point-to-point links, with the two spines as route reflectors that pass each leaf's routes to the others so the leaves never peer directly. No OSPF, no IS-IS. The spines also advertise their connected `/31` links, so a leaf can resolve the next hop to a remote leaf's VTEP (VXLAN tunnel endpoint) loopback. That point matters for the overlay later.
+The design is deliberately plain. One autonomous system (AS), 65400, serves the whole fabric. iBGP (internal Border Gateway Protocol, BGP) runs over the point-to-point links. The two spines act as route reflectors that pass each leaf's routes to the others, so the leaves never peer directly. The fabric uses no OSPF and no IS-IS. The spines also advertise their connected `/31` links, so a leaf can resolve the next hop to a remote leaf's VTEP (VXLAN tunnel endpoint) loopback. The advertised `/31` links matter for the overlay later.
 
 Broadcast, unknown-unicast, and multicast traffic (BUM) rides a multicast tree. PIM (Protocol Independent Multicast) sparse mode runs across the fabric, and the two spines share one anycast rendezvous point (RP). Each L2 segment maps to a multicast group, so a leaf floods a broadcast once and the fabric replicates it down the tree to the leaves that joined. The overlay page sets the per-segment groups. This page builds the PIM core they depend on.
 
@@ -47,7 +47,7 @@ Broadcast, unknown-unicast, and multicast traffic (BUM) rides a multicast tree. 
 
 ## Addressing
 
-Loopback 0 is the router ID and the BGP peering address. Loopback 1 is the VTEP source the overlay uses. Each spine also carries loopback 254, the shared anycast rendezvous point for PIM. The uplinks are routed `/31` point-to-point links.
+Loopback 0 is the router ID and the BGP peering address. Loopback 1 is the VTEP source that the overlay uses. Each spine also carries loopback 254, the shared anycast rendezvous point for PIM. The uplinks are routed `/31` point-to-point links.
 
 | Device | loopback0 | loopback1 | loopback254 | Uplinks |
 |---|---|---|---|---|
@@ -58,7 +58,7 @@ Loopback 0 is the router ID and the BGP peering address. Loopback 1 is the VTEP 
 | leaf3 | 10.0.0.13 | 10.0.1.13 | n/a | Eth1/1 10.1.1.5/31, Eth1/2 10.1.2.5/31 |
 | leaf4 | 10.0.0.14 | 10.0.1.14 | n/a | Eth1/1 10.1.1.7/31, Eth1/2 10.1.2.7/31 |
 
-Both spines share the same loopback 254 address, 10.254.254.254. That is deliberate. A leaf sends its join toward whichever spine is closer, and PIM anycast keeps the two spines in sync, so either one can be the rendezvous point.
+Both spines share the same loopback 254 address, 10.254.254.254. The shared address is deliberate. A leaf sends its join toward whichever spine is closer, and PIM anycast keeps the two spines in sync, so either one can be the rendezvous point.
 
 ## Build order
 
@@ -75,7 +75,7 @@ feature pim
 
 ### 2. Loopbacks
 
-The spines need loopback 0 and loopback 254, the anycast rendezvous point. The leaves need loopback 0 and loopback 1, the VTEP source. PIM sparse mode goes on every loopback that the fabric reaches.
+The spines require loopback 0 and loopback 254, the anycast rendezvous point. The leaves require loopback 0 and loopback 1, the VTEP source. PIM sparse mode goes on every loopback that the fabric reaches.
 
 ```nxos
 ! spine1
@@ -200,7 +200,7 @@ ip pim anycast-rp 10.254.254.254 10.0.0.1
 ip pim anycast-rp 10.254.254.254 10.0.0.2
 ```
 
-The leaves need nothing beyond the `rp-address` line and PIM on their interfaces. They are receivers and sources on the tree, not rendezvous points.
+The leaves require nothing beyond the `rp-address` line and PIM on their interfaces. They are receivers and sources on the tree, not rendezvous points.
 
 <figure class="diagram" role="img" aria-label="Both spines share one anycast rendezvous point at 10.254.254.254. A broadcast from a host on leaf1 travels up to a spine, which replicates it down the shared tree to leaf3 and leaf4, the leaves that joined the group. Leaf2 did not join and receives nothing.">
 <svg viewBox="0 0 680 320" style="max-width:100%;height:auto">
@@ -239,7 +239,7 @@ The leaves need nothing beyond the `rp-address` line and PIM on their interfaces
   </g>
   <text x="516" y="159" text-anchor="middle" font-size="10" fill="#02C8FF" transform="rotate(48 516 159)">replicate down the tree</text>
 </svg>
-<figcaption>A broadcast from leaf1 travels up to the anycast rendezvous point once. The spine replicates it down the shared tree only to the leaves that joined the group. Leaf2 never joined, so it receives nothing. This replaces head-end replication, where the source leaf would copy the frame to every other VTEP itself.</figcaption>
+<figcaption>A broadcast from leaf1 travels up to the anycast rendezvous point once. The spine replicates it down the shared tree only to the leaves that joined the group. Leaf2 never joined, so it receives nothing. The shared tree replaces head-end replication, where the source leaf would copy the frame to every other VTEP itself.</figcaption>
 </figure>
 
 ### 6. Verify

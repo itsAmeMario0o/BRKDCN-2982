@@ -10,7 +10,7 @@ hide_page_header: true
 <section class="hero">
   <p class="eyebrow">A build-it-yourself fabric lab</p>
   <h1>Nexus <span class="gradient-text">&amp; Isovalent</span> Workshop</h1>
-  <p class="lede">This workshop builds a VXLAN (Virtual Extensible LAN) BGP (Border Gateway Protocol) EVPN (Ethernet VPN) fabric in one autonomous system (AS) on Nexus switches, stands a Kubernetes cluster beside it, and lets Cilium advertise pod networks straight into the fabric over BGP. No tunnel to the host, no static routes. A pod address becomes an ordinary prefix in the fabric's routing table.</p>
+  <p class="lede">This workshop builds a VXLAN (Virtual Extensible LAN) BGP (Border Gateway Protocol) EVPN (Ethernet VPN) fabric in one autonomous system (AS) on Nexus switches, stands a Kubernetes cluster beside it, and lets Cilium advertise pod networks directly into the fabric over BGP. The design adds no tunnel to the host and no static routes. A pod address becomes an ordinary prefix in the fabric's routing table.</p>
   <div class="actions">
     <a class="btn btn-primary" href="{{ '/architecture/' | relative_url }}">How it fits together</a>
     <a class="btn btn-secondary" href="{{ '/underlay/' | relative_url }}">Start the build</a>
@@ -23,17 +23,17 @@ hide_page_header: true
 
 ## What you will build
 
-A data center fabric and a cluster that speak the same routing language.
+You build a data center fabric and a cluster that speak the same routing language.
 
-The fabric is four leaves and two spines, all in one BGP autonomous system (65400). The spines act as route-reflectors. The leaves are VXLAN tunnel endpoints (VTEPs) with a distributed anycast gateway, so a host keeps the same default gateway no matter which leaf it plugs into. Two leaves form a vPC (virtual Port Channel) pair and share an anycast VTEP, so the pair looks like one next hop to the rest of the fabric.
+The fabric is four leaves and two spines, all in one BGP autonomous system (65400). The spines act as route-reflectors. The leaves are VXLAN tunnel endpoints (VTEPs) with a distributed anycast gateway, so a host keeps the same default gateway no matter which leaf it attaches to. Two leaves form a vPC (virtual Port Channel) pair and share an anycast VTEP, so the pair looks like one next hop to the rest of the fabric.
 
-Beside the fabric sits a Kubernetes cluster running Cilium as its CNI (Container Network Interface), with kube-proxy replaced and the BGP control plane turned on. The cluster is its own autonomous system (65001). Each node peers eBGP with the leaf it attaches to, advertises its pod CIDR, and the leaf re-originates that prefix as an EVPN Type-5 route. The spines then reflect the route, and every tunnel endpoint can reach the pod across VXLAN.
+Beside the fabric sits a Kubernetes cluster running Cilium as its CNI (Container Network Interface), with kube-proxy replaced and the BGP control plane turned on. The cluster is its own autonomous system (65001). Each node peers eBGP with the leaf that it attaches to, advertises its pod CIDR, and the leaf re-originates that prefix as an EVPN Type-5 route. The spines then reflect the route, and every tunnel endpoint can reach the pod across VXLAN.
 
 Everything here is code: a Terraform data model for the underlay, an Ansible data model for the overlay, Cilium CRDs (custom resource definitions) for the peering, and a GitOps and CI (continuous integration) pipeline that keeps everything applied.
 
 ## The prefix's journey, in one picture
 
-The point of the whole lab is a single path. A pod address leaves the cluster as plain BGP and arrives on every tunnel endpoint as an EVPN route, without the cluster knowing the fabric is EVPN at all.
+The point of the whole lab is a single path. A pod address leaves the cluster as plain BGP and arrives on every tunnel endpoint as an EVPN route. The cluster carries no EVPN configuration.
 
 ```
 pod (10.244.x.0/24)
@@ -45,7 +45,7 @@ pod (10.244.x.0/24)
   -> any VTEP can now route to the pod across VXLAN
 ```
 
-The leaf is the seam. BGP IPv4 unicast on the side facing the cluster, `l2vpn evpn` on the side facing the fabric.
+The leaf is the seam: BGP IPv4 unicast faces the cluster, and `l2vpn evpn` faces the fabric.
 
 ## Follow the build
 
@@ -96,9 +96,9 @@ The leaf is the seam. BGP IPv4 unicast on the side facing the cluster, `l2vpn ev
 
 ## Read and run it anywhere
 
-This repository is the portable source of truth for the fabric-as-code and its pipeline. It carries no secrets and no live addresses. The committed data models are the reference design, with placeholder endpoints. The operator supplies real device addresses and credentials at run time, so the lab reads and runs against any fabric that matches the design, not just one environment.
+This repository is the portable source of truth for the fabric-as-code and its pipeline. The repository carries no secrets and no live addresses. The committed data models are the reference design, with placeholder endpoints. The operator supplies real device addresses and credentials at run time, so the lab reads and runs against any fabric that matches the design, not just one environment.
 
 <div class="callout">
 <strong>What you need to run the lab for real.</strong>
-Six Nexus switches reachable over NX-API (NX-OS API), a Kubernetes cluster running Cilium with the BGP control plane enabled, and <code>kubectl</code>, the <code>cilium</code> CLI (command-line interface), Terraform, and Ansible on your path. Use cases 1 and 2 run on any Cilium cluster; use case 3 needs the fabric underneath. See <a href="{{ '/underlay/' | relative_url }}">the underlay page</a> to begin.
+You need six Nexus switches reachable over NX-API (NX-OS API), a Kubernetes cluster running Cilium with the BGP control plane enabled, and <code>kubectl</code>, the <code>cilium</code> CLI (command-line interface), Terraform, and Ansible on your path. Use cases 1 and 2 run on any Cilium cluster; use case 3 requires the fabric underneath. See <a href="{{ '/underlay/' | relative_url }}">the underlay page</a> to begin.
 </div>
