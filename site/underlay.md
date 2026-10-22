@@ -105,14 +105,12 @@ Routed `/31` links, no switchport. Each spine faces leaf1 through leaf4 on Eth1/
 ! spine1
 interface Ethernet1/1          ! to leaf1
   no switchport
-  medium p2p
   mtu 9216
   ip address 10.1.1.0/31
   ip pim sparse-mode
   no shutdown
 interface Ethernet1/2          ! to leaf2
   no switchport
-  medium p2p
   mtu 9216
   ip address 10.1.1.2/31
   ip pim sparse-mode
@@ -124,21 +122,17 @@ interface Ethernet1/2          ! to leaf2
 ! leaf1
 interface Ethernet1/1          ! to spine1
   no switchport
-  medium p2p
   mtu 9216
   ip address 10.1.1.1/31
   ip pim sparse-mode
   no shutdown
 interface Ethernet1/2          ! to spine2
   no switchport
-  medium p2p
   mtu 9216
   ip address 10.1.2.1/31
   ip pim sparse-mode
   no shutdown
 ```
-
-`medium p2p` marks each link as point-to-point. It skips ARP on a link that only ever has one neighbor, which speeds convergence.
 
 Jumbo MTU is not optional. VXLAN adds 50 bytes of outer headers to every frame. A full 1500-byte tenant frame becomes 1550 bytes on the wire, past the default 1500 limit, and the fabric drops it. Set the fabric links to 9216 so the encapsulated frame always fits.
 

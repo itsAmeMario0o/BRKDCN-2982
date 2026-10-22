@@ -17,7 +17,9 @@ This repository is the source of truth for the fabric-as-code and its pipeline. 
 
 Argo CD runs inside the cluster and reconciles Kubernetes manifests from this repo's `main` branch, pulling outbound. Because the repo is public, Argo clones it anonymously with no credential. Nothing inbound is required.
 
-The structure is the app-of-apps pattern: one root Application points at `gitops/apps/`, and each workload is a folder under it. Today there is one workload, a demo app, which proves the mechanism end to end. The pipeline grows by adding a folder under `gitops/apps/`, with no controller reconfiguration per workload.
+The structure is the app-of-apps pattern: one root Application points at `gitops/apps/`, and each workload is a folder under it. There is one workload today, a demo app. The pipeline grows by adding a folder under `gitops/apps/`, with no controller reconfiguration per workload.
+
+The manifests and the bootstrap live in `gitops/`, but Argo CD is not yet deployed on this cluster. The demo app is applied by hand today, the same as the fabric. The commands below are the intended bootstrap, not a step that is already running here.
 
 Bootstrap it from the cluster host (outbound internet to GitHub and a container registry required):
 
@@ -49,7 +51,7 @@ A self-hosted runner attached to a public repository is a known hazard: a fork c
 
 The apply model is full continuous delivery: a push to `main` runs `terraform init`, `plan`, and `apply`, then `ansible-playbook`, then pyATS, with no manual gate. pyATS runs after the apply and fails the build loudly if the fabric is wrong. When the switch console is not reachable, the pyATS step reports a clean skip rather than failing the apply for the wrong reason.
 
-The fabric lane is still a work in progress. The Terraform and Ansible models do not yet apply cleanly to the current topology, so the fabric is built by hand today. The CLI on the [underlay]({{ '/underlay/' | relative_url }}) and [overlay]({{ '/overlay/' | relative_url }}) pages is the current source of truth. The cluster lane (Argo CD) works end to end.
+The fabric lane is still a work in progress. The Terraform and Ansible models do not yet apply cleanly to the current topology, so the fabric is built by hand today. The CLI on the [underlay]({{ '/underlay/' | relative_url }}) and [overlay]({{ '/overlay/' | relative_url }}) pages is the current source of truth. The cluster lane is in the same state: the Argo CD manifests and bootstrap are in `gitops/`, but Argo is not yet running on this cluster, so the cluster workloads are applied by hand too.
 
 See ADR [0003](https://github.com/{{ site.repo.owner }}/{{ site.repo.name }}/tree/{{ site.repo.branch }}/docs/decisions) for the full trade-off, including the one-click gate that is the obvious upgrade path if the no-gate choice changes.
 

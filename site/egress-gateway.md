@@ -73,9 +73,8 @@ This is a Cilium use case that needs the fabric underneath, like [Cilium BGP]({{
 Egress gateway needs the eBPF masquerade path. Enable both and let the agents restart.
 
 ```bash
-cilium config set enable-ipv4-egress-gateway true
-cilium config set enable-bpf-masquerade true
-kubectl -n kube-system rollout restart ds/cilium
+helm upgrade cilium cilium/cilium -n kube-system --reuse-values \
+  --set egressGateway.enabled=true --set bpf.masquerade=true
 ```
 
 One restart gotcha: the operator registers the egress policy custom resource. If the agents report `waiting for Cilium Operator to register CRD`, restart the operator too.
@@ -123,7 +122,7 @@ spec:
     - 0.0.0.0/0
   excludedCIDRs:
     - 10.0.0.0/8              # keep fabric-internal traffic off the gateway
-    - 192.168.255.0/24        # keep out-of-band traffic off the gateway
+    - 192.0.2.0/24            # your out-of-band / management subnet
   egressGateway:
     nodeSelector:
       matchLabels:
@@ -147,7 +146,7 @@ On the firewall, read the translation table. The app's traffic appears sourced f
 
 ```
 show xlate | include 10.0.51.100
-! ICMP PAT from inside:10.0.51.100 to outside:<edge-address> ...
+! ICMP PAT from any:10.0.51.100 to outside:<edge-address> ...
 ```
 
 That one line is the proof. The app's packets reach the firewall carrying 10.0.51.100, so a firewall rule keyed on 10.0.51.100 governs the app. Move the pod to the other node, restart it, scale it: the egress identity does not change, because it belongs to the gateway, not the pod.

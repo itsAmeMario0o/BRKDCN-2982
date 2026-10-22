@@ -20,10 +20,10 @@ The result is a symmetric IRB fabric. One tenant VRF, `tenant1`, with an L3 VNI.
   <rect x="40" y="230" width="250" height="60" rx="6" fill="none" stroke="#02C8FF" stroke-width="1.5"/>
   <text x="165" y="255" text-anchor="middle" font-size="12" fill="currentColor">leaf1 + leaf2, vPC pair</text>
   <text x="165" y="275" text-anchor="middle" font-size="11" fill="#02C8FF">anycast VTEP 10.0.1.100</text>
-  <!-- single leaf -->
-  <rect x="420" y="230" width="200" height="60" rx="6" fill="none" stroke="currentColor" stroke-width="1.2"/>
-  <text x="520" y="255" text-anchor="middle" font-size="12" fill="currentColor">leaf3</text>
-  <text x="520" y="275" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.75">VTEP 10.0.1.13</text>
+  <!-- vPC pair B -->
+  <rect x="420" y="230" width="200" height="60" rx="6" fill="none" stroke="#02C8FF" stroke-width="1.5"/>
+  <text x="520" y="255" text-anchor="middle" font-size="11" fill="currentColor">leaf3 + leaf4, vPC pair</text>
+  <text x="520" y="275" text-anchor="middle" font-size="11" fill="#02C8FF">anycast VTEP 10.0.1.101</text>
   <!-- control plane links -->
   <g stroke="currentColor" stroke-width="1" opacity="0.6">
     <line x1="165" y1="230" x2="300" y2="72"/>

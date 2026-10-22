@@ -76,26 +76,38 @@ One small Python app (standard library only) runs as three tiers through a `ROLE
 ```bash
 kubectl apply -f 00-demo-app.yaml
 kubectl -n demo rollout status deploy/backend deploy/frontend deploy/database
+```
 
-# one alias for every probe, run from inside the frontend pod
-B="kubectl exec -n demo deploy/frontend -- curl -s --max-time 3"
+The frontend serves a web UI with probe buttons. Forward it and drive the demo from a browser, re-testing after each policy:
 
-$B http://backend:8081/api/health             # baseline: 200 ok
+```bash
+kubectl -n demo port-forward deploy/frontend 8080:8080
+# open http://localhost:8080 and run the DNS, TCP, and HTTP probes
+```
+
+To drive it from the CLI instead, call the frontend's `/check` endpoint. The image has no `curl`, so use its own Python. This helper returns a JSON verdict for each probe:
+
+```bash
+probe() { kubectl exec -n demo deploy/frontend -- \
+  python -c "import urllib.request as u,sys;print(u.urlopen('http://localhost:8080/check?'+sys.argv[1]).read().decode())" "$1"; }
+
+probe 'type=http&target=backend&port=8081&path=/api/health'   # baseline: ok, http 200
 
 kubectl apply -f 01-default-deny.yaml
-$B http://backend:8081/api/health || echo "denied (expected): the name does not even resolve"
+probe 'type=tcp&target=backend&port=8081'      # ok:false, blocked (DNS and TCP both denied)
 
-kubectl apply -f 02-dns-allow.yaml            # names resolve again, TCP still denied
+kubectl apply -f 02-dns-allow.yaml             # names resolve again, TCP still denied
 kubectl apply -f 03-l4-allow.yaml
-$B http://backend:8081/api/health             # 200 ok again
+probe 'type=http&target=backend&port=8081&path=/api/health'   # ok:true, http 200 again
+probe 'type=tcp&target=database&port=5432'     # ok:false, database stays blocked
 
 kubectl apply -f 04-l7-allow.yaml
-$B http://backend:8081/api/health             # GET /api/... allowed
-$B http://backend:8081/private || echo "L7 denied (403, expected)"
+probe 'type=http&target=backend&port=8081&path=/api/health'   # ok:true, GET /api/... allowed
+probe 'type=http&target=backend&port=8081&path=/private'      # ok:false, http 403 from the proxy
 
 kubectl apply -f 05-fqdn-egress.yaml
-$B https://api.github.com | head -c 40         # the one allowed name
-$B https://example.com || echo "other names denied (expected)"
+probe 'type=https&target=api.github.com&path=/'   # ok:true, the one allowed name
+probe 'type=https&target=example.com&path=/'      # ok:false, other names denied
 
 kubectl apply -f 06-clusterwide-deny.yaml      # metadata egress denied cluster-wide
 ```
@@ -129,6 +141,8 @@ Hubble is Cilium's observability layer. It reads the same eBPF data path that en
 cilium hubble enable --ui
 cilium status | grep -i hubble        # wait for Hubble: OK and hubble-ui: OK
 ```
+
+On a Helm-managed install, enable Hubble through Helm values instead (`hubble.relay.enabled=true`, `hubble.ui.enabled=true`), so a later `helm upgrade` does not revert it. `cilium hubble enable` edits the ConfigMap directly and Helm can undo it.
 
 ```bash
 cilium hubble port-forward &          # relay on localhost:4245
