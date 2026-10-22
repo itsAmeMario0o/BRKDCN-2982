@@ -42,6 +42,8 @@ nav:
     url: /overlay/
   - title: Cilium BGP
     url: /cilium-bgp/
+  - title: Validate the path
+    url: /validation/
   - title: Use cases
     url: /use-cases/
   - title: Pipeline
