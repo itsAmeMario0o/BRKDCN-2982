@@ -1,10 +1,12 @@
 # Use case 1: Network policies
 
 Default-deny a namespace, then open exactly the paths the app needs. Start at
-L3/L4, move to L7 (HTTP method and path), then add two things only Cilium can
-do: DNS-aware egress and a cluster-wide guardrail.
+L3/L4 (the network and transport layers), move to L7 (the application layer),
+by HTTP (Hypertext Transfer Protocol) method and path, then add two things only
+Cilium can do: DNS-aware egress (DNS, the Domain Name System) and a cluster-wide
+guardrail.
 
-Cilium enforces policy in eBPF at the pod's network interface, so this works
+Cilium enforces policy in eBPF (extended Berkeley Packet Filter) at the pod's network interface, so this works
 the same whether the two pods share a node or sit on nodes behind different
 leaves in the fabric.
 
@@ -19,7 +21,7 @@ leaves in the fabric.
 - A cluster-wide deny that holds across every namespace.
 
 Two of the policies are standard Kubernetes `NetworkPolicy` (portable across any
-CNI); the rest are `CiliumNetworkPolicy` and one `CiliumClusterwideNetworkPolicy`,
+CNI, Container Network Interface); the rest are `CiliumNetworkPolicy` and one `CiliumClusterwideNetworkPolicy`,
 which add the L7, DNS, and cluster-wide behavior that standard policy cannot
 express.
 

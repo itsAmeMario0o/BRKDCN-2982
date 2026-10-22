@@ -8,11 +8,11 @@ summary: Send one app's internet egress through the firewall as a fixed source I
 
 ## The problem
 
-A firewall can only govern what it can name. Pods are the wrong thing to name. A pod IP comes from the cluster's own CIDR, it changes on every restart, and the firewall never sees it because the node masquerades pod traffic behind the node address before it leaves. So a security policy keyed on "this app" has nothing stable to match.
+A firewall can only govern what it can name. Pods are the wrong thing to name. A pod IP comes from the cluster's own CIDR (Classless Inter-Domain Routing) range, it changes on every restart, and the firewall never sees it because the node masquerades pod traffic behind the node address before it leaves. So a security policy keyed on "this app" has nothing stable to match.
 
 The fix is to give one app a fixed, routable source address and send its egress through the firewall. Cilium egress gateway does the pinning. The fabric and a policy route do the steering. After that, a firewall rule keyed on one IP governs the whole app, wherever its pods land.
 
-This is a Cilium use case that needs the fabric underneath, like [Cilium BGP]({{ '/cilium-bgp/' | relative_url }}). The pod prefixes already reach the fabric as EVPN Type-5 routes. Egress gateway adds a return path for selected traffic: out through a border node, across the fabric, to the firewall at the edge.
+This is a Cilium use case that needs the fabric underneath, like [Cilium BGP]({{ '/cilium-bgp/' | relative_url }}). The pod prefixes already reach the fabric as EVPN (Ethernet VPN) Type-5 routes. Egress gateway adds a return path for selected traffic: out through a border node, across the fabric, to the firewall at the edge.
 
 ## The path
 
@@ -70,7 +70,7 @@ This is a Cilium use case that needs the fabric underneath, like [Cilium BGP]({{
 
 ### 1. Turn on egress gateway in Cilium
 
-Egress gateway needs the eBPF masquerade path. Enable both and let the agents restart.
+Egress gateway needs the eBPF (extended Berkeley Packet Filter) masquerade path. Enable both and let the agents restart.
 
 ```bash
 helm upgrade cilium cilium/cilium -n kube-system --reuse-values \
@@ -130,7 +130,7 @@ spec:
     egressIP: 10.0.51.100
 ```
 
-The `excludedCIDRs` matter. Without them, pod-to-pod traffic inside the fabric and the cluster's own management traffic would also be pulled through the gateway and masqueraded, which breaks both. The policy should only catch traffic actually leaving for the internet.
+The `excludedCIDRs` matter. Without them, the gateway also pulls pod-to-pod traffic inside the fabric and the cluster's own management traffic through itself and masquerades both, which breaks them. The policy should only catch traffic that is actually leaving for the internet.
 
 ## Verify
 

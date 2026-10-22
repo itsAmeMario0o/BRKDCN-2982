@@ -6,7 +6,7 @@ eyebrow: Show
 summary: Three worked use cases that run on top of the fabric. The first two run on any Cilium cluster; the third is the one this lab exists for.
 ---
 
-Each use case is self-contained: a short summary, the features it shows, the manifests, and the commands to prove it worked.
+Each use case is self-contained: a short summary, the features it shows, the manifests, and the commands to prove it works.
 
 <ul class="card-grid">
   <li>
@@ -36,21 +36,21 @@ Use case 3 is the headline. Use cases 1 and 2 are things any Cilium cluster can 
 
 <div class="callout">
 <strong>Prerequisites.</strong>
-All three assume the cluster is up: Cilium as the CNI with kube-proxy replaced and the BGP control plane on, plus <code>kubectl</code> and the <code>cilium</code> CLI pointed at it. Use case 3 also needs the <a href="{{ '/underlay/' | relative_url }}">underlay</a> and <a href="{{ '/overlay/' | relative_url }}">overlay</a> converged.
+All three assume the cluster is up: Cilium as the CNI (Container Network Interface) with kube-proxy replaced and the BGP (Border Gateway Protocol) control plane on, plus <code>kubectl</code> and the <code>cilium</code> CLI pointed at it. Use case 3 also needs the <a href="{{ '/underlay/' | relative_url }}">underlay</a> and <a href="{{ '/overlay/' | relative_url }}">overlay</a> converged.
 </div>
 
 ## Use case 1: Network policies
 
-Default-deny a namespace, then open exactly the paths the app needs, first at L3/L4, then at L7 (HTTP method and path).
+Default-deny a namespace, then open exactly the paths the app needs, first at L3/L4 (the network and transport layers), then at L7 (the application layer), by HTTP (Hypertext Transfer Protocol) method and path.
 
-Cilium enforces policy in eBPF at the pod's network interface, so this works the same whether the two pods land on the same node or on nodes hanging off different leaves in the fabric.
+Cilium enforces policy in eBPF (extended Berkeley Packet Filter) at the pod's network interface, so this works the same whether the two pods land on the same node or on nodes hanging off different leaves in the fabric.
 
 **What it shows**
 
 - Default-deny: once a pod is selected by any policy, anything not explicitly allowed is dropped.
 - L3/L4 segmentation with `CiliumNetworkPolicy`, by pod identity rather than IP.
 - L7 HTTP filtering: allow `GET /api/...`, and anything else gets a 403 from the proxy, not the app.
-- DNS-aware egress with `toFQDNs`: allow one external name and nothing else.
+- DNS-aware egress (DNS, the Domain Name System) with `toFQDNs`: allow one external name and nothing else.
 - A cluster-wide deny that holds across every namespace.
 
 The first two policies are standard Kubernetes `NetworkPolicy`, portable across any CNI. The rest are `CiliumNetworkPolicy` and one `CiliumClusterwideNetworkPolicy`, which add the L7, DNS, and cluster-wide behavior standard policy cannot express.
@@ -179,7 +179,7 @@ Source: [`use-cases/02-hubble/`](https://github.com/{{ site.repo.owner }}/{{ sit
 
 ## Use case 3: Cilium BGP
 
-Advertise pod CIDRs out of the cluster over eBGP, let the leaves re-originate them as EVPN Type-5 routes, and reach a pod from anywhere on the physical fabric. This is the use case the lab is built for, and it has a page of its own: [Cilium BGP]({{ '/cilium-bgp/' | relative_url }}) walks through the three CRDs, the path a pod prefix takes, and the fabric-side verification.
+Advertise pod CIDRs (Classless Inter-Domain Routing ranges) out of the cluster over eBGP (external BGP), let the leaves re-originate them as EVPN (Ethernet VPN) Type-5 routes, and reach a pod from anywhere on the physical fabric. This is the use case the lab is built for, and it has a page of its own: [Cilium BGP]({{ '/cilium-bgp/' | relative_url }}) walks through the three CRDs (custom resource definitions), the path a pod prefix takes, and the fabric-side verification.
 
 ```
 pod (10.244.x.0/24)

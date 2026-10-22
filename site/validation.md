@@ -8,9 +8,9 @@ summary: Walk a packet from a pod through the firewall to the internet one hop a
 
 ## What this proves
 
-An app pod sends traffic to the internet and it leaves through the firewall. That is not the node's default path. By design the nodes default out their out-of-band interface, which never touches the firewall, because the unlicensed firewall caps throughput near 100 Kbps. Only traffic that an egress-gateway policy selects is pinned to the firewall, source-NATed to a dedicated egress IP, and routed over the fabric to it.
+An app pod sends traffic to the internet and it leaves through the firewall. That is not the node's default path. By design the nodes default out their out-of-band interface, which never touches the firewall, because the unlicensed firewall caps throughput near 100 Kbps. Only traffic that an egress-gateway policy selects is pinned to the firewall, source-NATed (changed with network address translation, NAT) to a dedicated egress IP, and routed over the fabric to it.
 
-So this page validates that selected path, one hop at a time. Cilium pins the pod to the gateway node and source-NATs it to the egress IP, a policy route sends that address over the fabric, BGP EVPN carries it as a Type-5 route, the border leaf hands it to the firewall, and the firewall translates it out. Run the commands top to bottom. If a hop is wrong, you stop exactly where the path breaks.
+So this page validates that selected path, one hop at a time. Cilium pins the pod to the gateway node and source-NATs it to the egress IP, a policy route sends that address over the fabric, BGP (Border Gateway Protocol) EVPN (Ethernet VPN) carries it as a Type-5 route, the border leaf hands it to the firewall, and the firewall translates it out. Run the commands top to bottom. If a hop is wrong, you stop exactly where the path breaks.
 
 ```
 app pod (egress-demo)
@@ -67,7 +67,7 @@ The two `ip route get` lines are the point: the egress IP goes to the fabric, th
 
 ## 4. The vPC leaf pair
 
-The gateway node's two bond members land on `Po10`, a vPC port-channel split across the leaf pair. Confirm the port-channel is up and the node's MAC is learned on it.
+The gateway node's two bond members land on `Po10`, a vPC (virtual Port Channel) port-channel split across the leaf pair. Confirm the port-channel is up and the node's MAC is learned on it.
 
 ```
 show port-channel summary interface port-channel10     ! Po10(SU), member (P)
@@ -91,7 +91,7 @@ The `encap: VXLAN` and `segid 50000` (the L3VNI) are the proof the packet is tun
 
 ## 6. The border leaf to the firewall
 
-The border pair peers the firewall over eBGP in a different AS. Confirm the session and that the default came from it.
+The border pair peers the firewall over eBGP (external BGP) in a different AS (autonomous system). Confirm the session and that the default came from it.
 
 ```
 show bgp vrf tenant1 ipv4 unicast summary
@@ -100,7 +100,7 @@ show bgp vrf tenant1 ipv4 unicast summary
 
 ## 7. The firewall
 
-The firewall is the last hop before the internet. Its translation table is the definitive proof the whole chain worked: it shows the egress IP being PAT-translated out.
+The firewall is the last hop before the internet. Its translation table is the definitive proof the whole chain worked: it shows the firewall translating the egress IP out with PAT (Port Address Translation).
 
 ```
 show xlate | include 10.0.51.100
@@ -114,7 +114,7 @@ Seeing 10.0.51.100 (never the pod IP) in `show xlate` confirms the whole path at
 
 ## The reverse direction: reaching a pod
 
-The same Type-5 machinery makes pods reachable from the fabric, and this part does not depend on the egress gateway. The leaf under the pod's node advertises the pod CIDR; every other leaf installs it over VXLAN.
+The same Type-5 machinery makes pods reachable from the fabric, and this part does not depend on the egress gateway. The leaf under the pod's node advertises the pod CIDR (Classless Inter-Domain Routing) range; every other leaf installs it over VXLAN (Virtual Extensible LAN).
 
 ```
 show bgp l2vpn evpn | include 10.244                    ! pod CIDRs as Type-5

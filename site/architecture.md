@@ -8,11 +8,11 @@ summary: One autonomous system for the whole fabric, a cluster that is its own A
 
 ## The whole thing on one page
 
-Six Nexus switches make the fabric: two spines and four leaves. Everything runs in a single BGP autonomous system, 65400. There is no OSPF and no IS-IS. The underlay is iBGP over the point-to-point links, with the spines acting as route-reflectors, and that is enough to bootstrap reachability between every switch loopback.
+Six Nexus switches make the fabric: two spines and four leaves. Everything runs in a single BGP (Border Gateway Protocol) autonomous system (AS), 65400. There is no OSPF and no IS-IS. The underlay is iBGP over the point-to-point links, with the spines as route-reflectors, and that is enough to bootstrap reachability between every switch loopback.
 
-On top of the underlay the leaves run a `l2vpn evpn` overlay and VXLAN. Host subnets live behind distributed anycast gateways, so a server keeps the same gateway address wherever it attaches. Two of the leaves form a vPC pair and present a shared anycast tunnel endpoint, so the pair looks like a single next hop.
+On top of the underlay the leaves run a `l2vpn evpn` overlay and VXLAN (Virtual Extensible LAN). Host subnets live behind distributed anycast gateways, so a server keeps the same gateway address wherever it attaches. Two of the leaves form a vPC (virtual Port Channel) pair and present a shared anycast tunnel endpoint, so the pair looks like a single next hop.
 
-Off to one side is a Kubernetes cluster running Cilium. It is its own autonomous system, 65001, and it peers the leaves over eBGP. This is the BRKDCN-2982 "AS-per-cluster" model, and it is the reason a leaf can take a pod prefix learned over eBGP and re-originate it into EVPN.
+Off to one side is a Kubernetes cluster running Cilium. The cluster is its own autonomous system, 65001, and peers the leaves over eBGP. This is the BRKDCN-2982 "AS-per-cluster" model, and it is the reason a leaf can take a pod prefix learned over eBGP and re-originate it into EVPN (Ethernet VPN).
 
 {% include overview-diagram.html %}
 
@@ -22,7 +22,7 @@ A single-AS design keeps the fabric quiet. Because every switch shares one AS nu
 
 | Plane | What carries it | Role of the spines |
 |---|---|---|
-| Underlay | iBGP, IPv4 unicast, over the P2P links | Route-reflectors for loopback reachability |
+| Underlay | iBGP, IPv4 unicast, over the point-to-point links | Route-reflectors for loopback reachability |
 | Overlay | iBGP, `l2vpn evpn`, loopback to loopback | EVPN route-reflectors (`retain route-target all`) |
 | Cluster peering | eBGP, IPv4 unicast, node to leaf | Not involved; the leaf is the edge |
 
@@ -35,7 +35,7 @@ A single-AS design keeps the fabric quiet. Because every switch shares one AS nu
 
 <div class="phase">
   <h3><span class="step-num">L</span> Leaves</h3>
-  <p>Four leaves, each a VXLAN tunnel endpoint. They own the distributed anycast gateway for the tenant subnets, carry the tenant VRF, and sit on the seam: IPv4 unicast toward hosts and clusters, <code>l2vpn evpn</code> toward the fabric. A leaf is where a pod prefix learned over eBGP becomes an EVPN Type-5 route.</p>
+  <p>Four leaves, each a VXLAN tunnel endpoint (VTEP). They own the distributed anycast gateway for the tenant subnets, carry the tenant VRF (virtual routing and forwarding), and sit on the seam: IPv4 unicast toward hosts and clusters, <code>l2vpn evpn</code> toward the fabric. A leaf is where a pod prefix learned over eBGP becomes an EVPN Type-5 route.</p>
 </div>
 
 <div class="phase">
@@ -89,11 +89,11 @@ The overlay builds a symmetric integrated routing and bridging (IRB) fabric for 
 | Fabric AS | 65400 |
 | Cluster AS | 65001 |
 
-Because `red` and `blue` route to each other across the fabric over the L3 VNI, a host in one subnet can reach a host in the other even when they sit on different leaves. That symmetric IRB behavior is the thing the overlay exists to provide.
+Because `red` and `blue` route to each other across the fabric over the Layer 3 VNI (VXLAN network identifier), a host in one subnet can reach a host in the other even when they sit on different leaves. That symmetric IRB behavior is what the overlay exists to provide.
 
 ## How a node attaches
 
-A node does not plug into a single leaf. It dual-homes into a vPC pair over one bonded link, and it speaks eBGP to the pair to advertise its pod CIDR.
+A node does not plug into a single leaf. The node dual-homes into a vPC pair over one bonded link and speaks eBGP to the pair to advertise its pod CIDR.
 
 <figure class="diagram" role="img" aria-label="A Kubernetes node dual-homes into a vPC pair of two leaves. One bonded link splits to both leaves, which share an anycast tunnel endpoint, and the node peers the pair over eBGP.">
 <svg viewBox="0 0 520 300" style="max-width:100%;height:auto">
@@ -160,14 +160,14 @@ Inside the node, that bond is one of two network paths. The bonded pair carries 
   <text x="430" y="202" text-anchor="middle" font-size="10.5" fill="currentColor" opacity="0.8">default route</text>
   <text x="430" y="233" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.6">out-of-band</text>
 </svg>
-<figcaption>Inside a node. Two virtual NICs bond into <code>bond0</code> for the fabric (static LAG, MTU 1400 to fit the VXLAN overhead), carrying the node address and the egress-gateway IP 10.0.51.100. A separate out-of-band NIC holds the default route, so pulls and telemetry bypass the rate-limited firewall path.</figcaption>
+<figcaption>Inside a node. Two virtual NICs bond into <code>bond0</code> for the fabric, a static LAG with MTU (maximum transmission unit) 1400 to fit the VXLAN overhead, carrying the node address and the egress-gateway IP 10.0.51.100. A separate out-of-band NIC holds the default route, so pulls and telemetry bypass the rate-limited firewall path.</figcaption>
 </figure>
 
 ## The seam, stated plainly
 
 The cluster speaks plain eBGP. It neither knows nor cares that the fabric is EVPN. The leaf does the translation: it learns the pod prefix as an ordinary IPv4 route in the tenant VRF, then re-originates it as an EVPN Type-5 (IP prefix) route. The spines reflect that route to every other leaf, and any tunnel endpoint can now forward to the pod across VXLAN.
 
-That one seam is what makes this a Nexus and Isovalent lab, not a single-cluster one. The next pages build it from the bottom up: the [underlay]({{ '/underlay/' | relative_url }}) first, then the [overlay and vPC]({{ '/overlay/' | relative_url }}), then the [Cilium peering]({{ '/cilium-bgp/' | relative_url }}) that lights up the whole chain.
+That one seam is what makes this a Nexus and Isovalent lab, not a single-cluster one. The next pages build the lab from the bottom up: the [underlay]({{ '/underlay/' | relative_url }}) first, then the [overlay and vPC]({{ '/overlay/' | relative_url }}), then the [Cilium peering]({{ '/cilium-bgp/' | relative_url }}) that lights up the whole chain.
 
 <div class="callout">
 <strong>Design records.</strong>

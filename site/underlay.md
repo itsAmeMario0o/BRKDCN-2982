@@ -8,9 +8,9 @@ summary: Build the single-AS iBGP underlay in order. Features, loopbacks, point-
 
 The underlay has two jobs: make every switch loopback reachable from every other switch, and carry the overlay's broadcast traffic. The overlay rides on top of both, so the underlay comes first.
 
-The design is deliberately plain. One autonomous system for the whole fabric, 65400. iBGP over the point-to-point links, with the two spines as route reflectors. No OSPF, no IS-IS. The spines also advertise their connected `/31` links, so a leaf can resolve the next hop to a remote leaf's VTEP loopback. That point matters for the overlay later.
+The design is deliberately plain. One autonomous system (AS) for the whole fabric, 65400. iBGP (internal Border Gateway Protocol, BGP) over the point-to-point links, with the two spines as route reflectors. No OSPF, no IS-IS. The spines also advertise their connected `/31` links, so a leaf can resolve the next hop to a remote leaf's VTEP (VXLAN tunnel endpoint) loopback. That point matters for the overlay later.
 
-Broadcast, unknown-unicast, and multicast traffic (BUM) rides a multicast tree. PIM sparse mode runs across the fabric, and the two spines share one anycast rendezvous point. Each L2 segment maps to a multicast group, so a leaf floods a broadcast once and the fabric replicates it down the tree to the leaves that joined. The overlay page sets the per-segment groups. This page builds the PIM core they depend on.
+Broadcast, unknown-unicast, and multicast traffic (BUM) rides a multicast tree. PIM (Protocol Independent Multicast) sparse mode runs across the fabric, and the two spines share one anycast rendezvous point (RP). Each L2 segment maps to a multicast group, so a leaf floods a broadcast once and the fabric replicates it down the tree to the leaves that joined. The overlay page sets the per-segment groups. This page builds the PIM core they depend on.
 
 <figure class="diagram" role="img" aria-label="Two spines act as BGP route reflectors for four leaves. Each leaf runs iBGP to both spines over point-to-point /31 links, all in AS 65400.">
 <svg viewBox="0 0 660 300" style="max-width:100%;height:auto">
@@ -47,7 +47,7 @@ Broadcast, unknown-unicast, and multicast traffic (BUM) rides a multicast tree. 
 
 ## Addressing
 
-Loopback 0 is the router ID and the BGP peering address. Loopback 1 is the VTEP source the overlay will use. Each spine also carries loopback 254, the shared anycast rendezvous point for PIM. The uplinks are routed `/31` point-to-point links.
+Loopback 0 is the router ID and the BGP peering address. Loopback 1 is the VTEP source the overlay uses. Each spine also carries loopback 254, the shared anycast rendezvous point for PIM. The uplinks are routed `/31` point-to-point links.
 
 | Device | loopback0 | loopback1 | loopback254 | Uplinks |
 |---|---|---|---|---|
@@ -99,7 +99,7 @@ interface loopback1
 
 ### 3. Point-to-point links
 
-Routed `/31` links, no switchport. Each spine faces leaf1 through leaf4 on Eth1/1 through Eth1/4. Two settings matter on every fabric link: jumbo MTU and PIM.
+Routed `/31` links, no switchport. Each spine faces leaf1 through leaf4 on Eth1/1 through Eth1/4. Two settings matter on every fabric link: jumbo MTU (maximum transmission unit) and PIM.
 
 ```nxos
 ! spine1
@@ -179,7 +179,7 @@ router bgp 65400
     address-family ipv4 unicast
 ```
 
-Why the spines advertise their `/31` links: a reflected loopback route keeps the next hop of the leaf that originated it, which is that leaf's `/31` uplink address. For leaf1 to install a route to leaf4's VTEP loopback, leaf1 must be able to resolve that next hop. Advertising the transit `/31` links puts those next hops in the table. Without it, the overlay's VTEP-to-VTEP routes would never resolve. The same advertisement carries 10.254.254.254, so every leaf can reach the rendezvous point.
+Why the spines advertise their `/31` links: a reflected loopback route keeps the next hop of the leaf that originated it, which is that leaf's `/31` uplink address. For leaf1 to install a route to leaf4's VTEP loopback, leaf1 must be able to resolve that next hop. Advertising the transit `/31` links puts those next hops in the table. Without that advertisement, the overlay's VTEP-to-VTEP routes would never resolve. The same advertisement carries 10.254.254.254, so every leaf can reach the rendezvous point.
 
 ### 5. PIM anycast rendezvous point
 
@@ -252,9 +252,9 @@ show ip pim neighbor               ! a PIM neighbor on every fabric link
 show ip mroute                     ! the shared trees once the overlay groups are active
 ```
 
-Loopback-to-loopback reachability across the fabric is the finish line for this stage. The overlay's EVPN sessions run loopback to loopback, so they cannot form until the underlay carries those loopbacks everywhere.
+Loopback-to-loopback reachability across the fabric is the finish line for this stage. The overlay's EVPN (Ethernet VPN) sessions run loopback to loopback, so they cannot form until the underlay carries those loopbacks everywhere.
 
 <div class="callout">
 <strong>On automation.</strong>
-The intended way to build this is network as code: a Terraform run against the netascode <code>nac-nxos</code> model in <a href="https://github.com/{{ site.repo.owner }}/{{ site.repo.name }}/tree/{{ site.repo.branch }}/terraform">terraform/</a>. That path is a work in progress and does not yet apply cleanly to the current topology, so the CLI above is the source of truth for now.
+The intended way to build the underlay is network as code: a Terraform run against the netascode <code>nac-nxos</code> model in <a href="https://github.com/{{ site.repo.owner }}/{{ site.repo.name }}/tree/{{ site.repo.branch }}/terraform">terraform/</a>. That path is a work in progress and does not yet apply cleanly to the current topology, so the CLI (command-line interface) above is the source of truth for now.
 </div>

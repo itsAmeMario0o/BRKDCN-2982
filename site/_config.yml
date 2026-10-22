@@ -48,6 +48,8 @@ nav:
     url: /egress-gateway/
   - title: E2E Path
     url: /validation/
+  - title: Observability
+    url: /observability/
   - title: Pipeline
     url: /pipeline/
 

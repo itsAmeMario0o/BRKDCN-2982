@@ -6,9 +6,9 @@ eyebrow: Build
 summary: Lay the EVPN overlay and VXLAN on the underlay, in order. Features, EVPN route reflectors, the tenant VRF and anycast gateways, the VTEP, then the vPC pair.
 ---
 
-The overlay rides on the underlay from the previous page, so build the underlay first. The overlay adds two things: a BGP EVPN control plane for the spines to reflect, and VXLAN tunnels between the leaves to carry tenant traffic.
+The overlay rides on the underlay from the previous page, so build the underlay first. The overlay adds two things: a BGP (Border Gateway Protocol) EVPN (Ethernet VPN) control plane for the spines to reflect, and VXLAN (Virtual Extensible LAN) tunnels between the leaves to carry tenant traffic.
 
-The result is a symmetric IRB fabric. One tenant VRF, `tenant1`, with an L3 VNI. Two Layer 2 segments, red and blue, each with a distributed anycast gateway. A host keeps the same gateway on any leaf, and red talks to blue by routing across the L3 VNI rather than bridging.
+The result is a symmetric IRB (integrated routing and bridging) fabric. One tenant VRF (virtual routing and forwarding), `tenant1`, with an L3 VNI (VXLAN network identifier). Two Layer 2 segments, red and blue, each with a distributed anycast gateway. A host keeps the same gateway on any leaf, and red talks to blue by routing across the L3 VNI rather than bridging.
 
 <figure class="diagram" role="img" aria-label="Leaves are VTEPs. The EVPN control plane runs through the spine route reflectors. A vPC leaf pair shares one anycast VTEP address, so the fabric sees the pair as a single next hop.">
 <svg viewBox="0 0 660 320" style="max-width:100%;height:auto">
@@ -34,7 +34,7 @@ The result is a symmetric IRB fabric. One tenant VRF, `tenant1`, with an L3 VNI.
   <line x1="290" y1="260" x2="420" y2="260" stroke="currentColor" stroke-width="1.5" stroke-dasharray="5 4"/>
   <text x="355" y="252" text-anchor="middle" font-size="11" fill="currentColor">VXLAN: L2 VNI + L3 VNI</text>
 </svg>
-<figcaption>The spines reflect EVPN routes between VTEPs. Data rides VXLAN tunnels leaf to leaf. A vPC pair shares one anycast VTEP address, so the rest of the fabric routes to the pair as a single next hop.</figcaption>
+<figcaption>The spines reflect EVPN routes between VTEPs (VXLAN tunnel endpoints). Data rides VXLAN tunnels leaf to leaf. A vPC (virtual Port Channel) pair shares one anycast VTEP address, so the rest of the fabric routes to the pair as a single next hop.</figcaption>
 </figure>
 
 ## The scheme
@@ -53,7 +53,7 @@ Each L2 VNI maps to one multicast group in the `239.0.0.0/8` range the underlay 
 
 ## How a packet crosses the fabric
 
-Symmetric integrated routing and bridging (IRB) moves traffic between two subnets on two different leaves in a fixed sequence: bridge, route, route, bridge. The L2 VNIs stay local to each leaf. The routing between them happens over the L3 VNI, a transit segment that only the VTEPs see.
+Symmetric IRB moves traffic between two subnets on two different leaves in a fixed sequence: bridge, route, route, bridge. The L2 VNIs stay local to each leaf. The routing between them happens over the L3 VNI, a transit segment that only the VTEPs see.
 
 <figure class="diagram" role="img" aria-label="A packet from a red host on leaf1 is bridged to leaf1, routed into the L3 VNI, carried over VXLAN to leaf4, routed out, and bridged to a blue host. The L3 VNI is the transit segment between the two VTEPs.">
 <svg viewBox="0 0 700 220" style="max-width:100%;height:auto">
@@ -115,7 +115,7 @@ feature nv overlay
 nv overlay evpn
 ```
 
-On the leaves, add the segment and interface features. The vPC pair also needs `vpc` and `lacp`.
+On the leaves, add the segment and interface features. The vPC pair also needs `vpc` and `lacp` (Link Aggregation Control Protocol).
 
 ```nxos
 feature vn-segment-vlan-based
@@ -186,11 +186,11 @@ interface Vlan200                ! blue anycast gateway
   no ip redirects
 ```
 
-The L3 VNI SVI carries no IP address. It is the routing anchor for the tenant VRF, so it needs `ip forward` and `no ip redirects` and nothing else. The anycast gateway SVIs take `no ip redirects` as well, since the gateway address is identical on every leaf and a redirect would point nowhere useful.
+The L3 VNI SVI (switched virtual interface) carries no IP address. The SVI is the routing anchor for the tenant VRF, so it needs `ip forward` and `no ip redirects` and nothing else. The anycast gateway SVIs take `no ip redirects` as well, since the gateway address is identical on every leaf and a redirect would point nowhere useful.
 
 ### 4. The VTEP and the EVPN instances
 
-The NVE interface sources from loopback1 and carries the L3 VNI plus the L2 VNIs. BGP still handles host and MAC reachability. Broadcast traffic rides the multicast tree the underlay built, so each L2 VNI binds to a `mcast-group` rather than listing every remote VTEP for head-end replication.
+The NVE (network virtualization edge) interface sources from loopback1 and carries the L3 VNI plus the L2 VNIs. BGP still handles host and MAC reachability. Broadcast traffic rides the multicast tree the underlay built, so each L2 VNI binds to a `mcast-group` rather than listing every remote VTEP for head-end replication.
 
 ```nxos
 ! leaf
@@ -292,7 +292,7 @@ interface port-channel500
   vpc peer-link
 ```
 
-Two details make this correct. The shared VIP must be reachable in the underlay, which is why it gets a `network` statement. And `advertise-pip` with `advertise virtual-rmac` splits the next hop by route type: Type-2 host routes use the shared VIP, Type-5 prefix routes use each leaf's unique primary address. Without that split, a routed prefix learned behind one member could be sent to the other and dropped.
+Two details make the vPC correct. The shared VIP (virtual IP) must be reachable in the underlay, which is why it gets a `network` statement. And `advertise-pip` with `advertise virtual-rmac` splits the next hop by route type: Type-2 host routes use the shared VIP, Type-5 prefix routes use each leaf's unique primary address. Without that split, a routed prefix learned behind one member could be sent to the other and dropped.
 
 ### 7. Verify
 
@@ -307,5 +307,5 @@ Red reaching blue is the proof the overlay works. The two hosts sit in different
 
 <div class="callout">
 <strong>On automation.</strong>
-The intended way to build this is network as code: an Ansible run against the overlay data model in <a href="https://github.com/{{ site.repo.owner }}/{{ site.repo.name }}/tree/{{ site.repo.branch }}/ansible">ansible/</a>, device-direct over NX-API. That path is a work in progress and does not yet apply cleanly to the current topology, so the CLI above is the source of truth for now.
+The intended way to build the overlay is network as code: an Ansible run against the overlay data model in <a href="https://github.com/{{ site.repo.owner }}/{{ site.repo.name }}/tree/{{ site.repo.branch }}/ansible">ansible/</a>, device-direct over NX-API (NX-OS API). That path is a work in progress and does not yet apply cleanly to the current topology, so the CLI (command-line interface) above is the source of truth for now.
 </div>

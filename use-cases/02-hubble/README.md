@@ -1,16 +1,16 @@
 # Use case 2: Hubble observability
 
-**Turn on Hubble and watch the flows** - every connection, every policy
+**Turn on Hubble and watch the flows**: every connection, every policy
 verdict, and a live service map, without touching the application.
 
-Hubble is Cilium's observability layer. It reads the same eBPF data path that
-enforces policy in use case 1, so "why was this dropped?" has an answer you can
-see rather than guess.
+Hubble is Cilium's observability layer. It reads the same eBPF (extended Berkeley
+Packet Filter) data path that enforces policy in use case 1, so "why was this
+dropped?" has an answer you can see rather than guess.
 
 ## Can this lab run Hubble? Yes.
 
-Hubble is not separate infrastructure. It is `hubble-relay` and `hubble-ui` -
-two small pods - enabled on the Cilium install you already have. Any cluster
+Hubble is not separate infrastructure. It is `hubble-relay` and `hubble-ui`,
+two small pods, enabled on the Cilium install you already have. Any cluster
 running Cilium can run it, it is light on resources, and the lab VM has plenty
 of headroom. The only thing you set up is a way to reach the UI from your
 workstation (a port-forward or an SSH tunnel), the same pattern the other lab
@@ -19,7 +19,7 @@ UIs use.
 ## Key features
 
 - Flow visibility: source/destination identity, port, protocol, verdict.
-- The policy verdict on every flow - see the use case 1 drops as `DROPPED`.
+- The policy verdict on every flow, so the use case 1 drops show up as `DROPPED`.
 - The Hubble UI service map: a live graph of who talks to whom.
 
 ## Enable it

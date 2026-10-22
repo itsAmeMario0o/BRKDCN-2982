@@ -10,7 +10,7 @@ hide_page_header: true
 <section class="hero">
   <p class="eyebrow">A build-it-yourself fabric lab</p>
   <h1>Nexus <span class="gradient-text">&amp; Isovalent</span> Workshop</h1>
-  <p class="lede">This workshop builds a single-AS VXLAN BGP EVPN fabric on Nexus switches, stands a Kubernetes cluster beside it, and lets Cilium advertise pod networks straight into the fabric over BGP. No tunnel to the host, no static routes. A pod address becomes an ordinary prefix in the fabric's routing table.</p>
+  <p class="lede">This workshop builds a VXLAN (Virtual Extensible LAN) BGP (Border Gateway Protocol) EVPN (Ethernet VPN) fabric in one autonomous system (AS) on Nexus switches, stands a Kubernetes cluster beside it, and lets Cilium advertise pod networks straight into the fabric over BGP. No tunnel to the host, no static routes. A pod address becomes an ordinary prefix in the fabric's routing table.</p>
   <div class="actions">
     <a class="btn btn-primary" href="{{ '/architecture/' | relative_url }}">How it fits together</a>
     <a class="btn btn-secondary" href="{{ '/underlay/' | relative_url }}">Start the build</a>
@@ -25,11 +25,11 @@ hide_page_header: true
 
 A data center fabric and a cluster that speak the same routing language.
 
-The fabric is four leaves and two spines, all in one BGP autonomous system (65400). The spines act as route-reflectors. The leaves are VXLAN tunnel endpoints with a distributed anycast gateway, so a host keeps the same default gateway no matter which leaf it plugs into. Two leaves form a vPC pair and share an anycast VTEP, so the pair looks like one next hop to the rest of the fabric.
+The fabric is four leaves and two spines, all in one BGP autonomous system (65400). The spines act as route-reflectors. The leaves are VXLAN tunnel endpoints (VTEPs) with a distributed anycast gateway, so a host keeps the same default gateway no matter which leaf it plugs into. Two leaves form a vPC (virtual Port Channel) pair and share an anycast VTEP, so the pair looks like one next hop to the rest of the fabric.
 
-Beside the fabric sits a Kubernetes cluster running Cilium as its CNI, with kube-proxy replaced and the BGP control plane turned on. The cluster is its own autonomous system (65001). Each node peers eBGP with the leaf it hangs off, advertises its pod CIDR, and the leaf re-originates that prefix as an EVPN Type-5 route. From there the spines reflect it and every tunnel endpoint can reach the pod across VXLAN.
+Beside the fabric sits a Kubernetes cluster running Cilium as its CNI (Container Network Interface), with kube-proxy replaced and the BGP control plane turned on. The cluster is its own autonomous system (65001). Each node peers eBGP with the leaf it attaches to, advertises its pod CIDR, and the leaf re-originates that prefix as an EVPN Type-5 route. The spines then reflect the route, and every tunnel endpoint can reach the pod across VXLAN.
 
-Everything here is code: a Terraform data model for the underlay, an Ansible data model for the overlay, Cilium CRDs for the peering, and a GitOps and CI pipeline that keeps all of it applied.
+Everything here is code: a Terraform data model for the underlay, an Ansible data model for the overlay, Cilium CRDs (custom resource definitions) for the peering, and a GitOps and CI (continuous integration) pipeline that keeps everything applied.
 
 ## The prefix's journey, in one picture
 
@@ -61,14 +61,14 @@ The leaf is the seam. BGP IPv4 unicast on the side facing the cluster, `l2vpn ev
     <a class="card card-interactive" href="{{ '/underlay/' | relative_url }}">
       <span class="card-kicker">02 · Build</span>
       <span class="card-title">The underlay</span>
-      <p>Terraform brings up the switches and the iBGP underlay that bootstraps loopback reachability with no IGP.</p>
+      <p>Terraform brings up the switches and the iBGP underlay that bootstraps loopback reachability with no IGP (interior gateway protocol).</p>
     </a>
   </li>
   <li>
     <a class="card card-interactive" href="{{ '/overlay/' | relative_url }}">
       <span class="card-kicker">03 · Build</span>
       <span class="card-title">The overlay and vPC</span>
-      <p>Ansible lays the l2vpn evpn overlay, the tenant VRF, anycast gateways, and the vPC leaf pair, device-direct.</p>
+      <p>Ansible lays the l2vpn evpn overlay, the tenant VRF (virtual routing and forwarding), anycast gateways, and the vPC leaf pair, device-direct.</p>
     </a>
   </li>
   <li>
@@ -96,9 +96,9 @@ The leaf is the seam. BGP IPv4 unicast on the side facing the cluster, `l2vpn ev
 
 ## Read and run it anywhere
 
-This repository is the portable source of truth for the fabric-as-code and its pipeline. It carries no secrets and no live addresses. The committed data models are the reference design, with placeholder endpoints. Real device addresses and credentials are supplied at run time from the operator's side, so the lab reads and runs against any fabric that matches the design, not just one environment.
+This repository is the portable source of truth for the fabric-as-code and its pipeline. It carries no secrets and no live addresses. The committed data models are the reference design, with placeholder endpoints. The operator supplies real device addresses and credentials at run time, so the lab reads and runs against any fabric that matches the design, not just one environment.
 
 <div class="callout">
-<strong>What you need to run it for real.</strong>
-Six Nexus switches reachable over NX-API, a Kubernetes cluster running Cilium with the BGP control plane enabled, and <code>kubectl</code>, the <code>cilium</code> CLI, Terraform, and Ansible on your path. Use cases 1 and 2 run on any Cilium cluster; use case 3 needs the fabric underneath. See <a href="{{ '/underlay/' | relative_url }}">the underlay page</a> to begin.
+<strong>What you need to run the lab for real.</strong>
+Six Nexus switches reachable over NX-API (NX-OS API), a Kubernetes cluster running Cilium with the BGP control plane enabled, and <code>kubectl</code>, the <code>cilium</code> CLI (command-line interface), Terraform, and Ansible on your path. Use cases 1 and 2 run on any Cilium cluster; use case 3 needs the fabric underneath. See <a href="{{ '/underlay/' | relative_url }}">the underlay page</a> to begin.
 </div>

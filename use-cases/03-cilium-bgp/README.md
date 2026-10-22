@@ -1,9 +1,10 @@
 # Use case 3: Cilium BGP (the "Network" one)
 
-**Advertise pod CIDRs out of the cluster over eBGP, let the leaves
-re-originate them as EVPN Type-5 routes, and reach a pod from anywhere on the
-physical fabric.** No overlay tunnel to the host, no static routes - the pod
-network is just another prefix in the fabric's routing table.
+**Advertise pod CIDRs (Classless Inter-Domain Routing ranges) out of the
+cluster over eBGP (external Border Gateway Protocol), let the leaves
+re-originate them as EVPN (Ethernet VPN) Type-5 routes, and reach a pod from
+anywhere on the physical fabric.** No overlay tunnel to the host, no static
+routes: the pod network is just another prefix in the fabric's routing table.
 
 This is the use case the lab is built for. Use cases 1 and 2 run on any Cilium
 cluster. This one needs a real spine/leaf fabric underneath, which is exactly
@@ -27,18 +28,19 @@ the north side.
 
 ## Key features
 
-- `CiliumBGPClusterConfig` - the cluster's BGP speaker: local AS 65001, peer
-  the leaf pair.
-- `CiliumBGPPeerConfig` - timers, graceful restart, and which address families
+- `CiliumBGPClusterConfig`, the cluster's BGP speaker: local AS (autonomous
+  system) 65001, peer the leaf pair.
+- `CiliumBGPPeerConfig`, timers, graceful restart, and which address families
   to carry.
-- `CiliumBGPAdvertisement` - advertise `PodCIDR` (and, optionally, LoadBalancer
+- `CiliumBGPAdvertisement`, advertise `PodCIDR` (and, optionally, LoadBalancer
   service IPs).
 - The fabric side: the leaf redistributes the learned pod prefix into EVPN as a
-  Type-5 route, so it is reachable from the other leaf pair across VXLAN.
+  Type-5 route, so it is reachable from the other leaf pair across VXLAN (Virtual
+  Extensible LAN).
 
 ## Manifests
 
-The Cilium BGP CRDs live with the fabric config in this repo. See
+The Cilium BGP CRDs (custom resource definitions) live with the fabric config in this repo. See
 [`../../cilium/bgp.yaml`](../../cilium/bgp.yaml) for the applied manifest. The
 leaf underlay/overlay that terminates these sessions is in
 [`../../terraform/`](../../terraform/) and [`../../ansible/`](../../ansible/).
@@ -116,7 +118,7 @@ show nve peers                               # VTEP adjacency to the far leaf pa
 show ip route vrf <tenant>                   # the pod CIDR installed in the VRF
 ```
 
-End to end - reach a pod on one leaf pair from a host on the other:
+End to end, reach a pod on one leaf pair from a host on the other:
 
 ```bash
 # from the border-side k8s node (or a host in the far VRF):
@@ -129,9 +131,10 @@ the data plane.
 
 > Testing from a switch instead of a host? Always set an explicit, unique
 > `source` on the ping, for example `ping <remote> vrf <tenant> source
-> <a per-leaf loopback in the VRF>`. An unsourced VRF ping sources from the
-> anycast gateway SVI, whose address is identical on every leaf, so the reply
-> never comes back and a healthy fabric looks broken. Real pods have their own
+> <a per-leaf loopback in the VRF>`. An unsourced VRF (Virtual Routing and
+> Forwarding) ping sources from the anycast gateway SVI (Switched Virtual
+> Interface), whose address is identical on every leaf, so the reply never
+> comes back and a healthy fabric looks broken. Real pods have their own
 > addresses and are not affected.
 
 ## Captured output
