@@ -50,9 +50,9 @@ This is a Cilium use case that needs the fabric underneath, like [Cilium BGP]({{
     <rect x="610" y="150" width="94" height="54" rx="6" fill="none" stroke="currentColor" stroke-width="1.2"/>
     <text x="657" y="181" text-anchor="middle">internet</text>
     <!-- OOB -->
-    <rect x="200" y="252" width="170" height="54" rx="6" fill="none" stroke="currentColor" stroke-width="1" opacity="0.5" stroke-dasharray="5 4"/>
-    <text x="285" y="275" text-anchor="middle" opacity="0.7">node management</text>
-    <text x="285" y="292" text-anchor="middle" opacity="0.6" font-size="10">out of band, skips firewall</text>
+    <rect x="20" y="228" width="160" height="56" rx="6" fill="none" stroke="currentColor" stroke-width="1" opacity="0.5" stroke-dasharray="5 4"/>
+    <text x="100" y="251" text-anchor="middle" opacity="0.7">node management</text>
+    <text x="100" y="268" text-anchor="middle" opacity="0.6" font-size="10">out of band, skips firewall</text>
   </g>
   <!-- flows -->
   <line x1="146" y1="70" x2="198" y2="70" stroke="currentColor" stroke-width="1.4" fill="none" marker-end="url(#eg-arrow)"/>
@@ -60,7 +60,8 @@ This is a Cilium use case that needs the fabric underneath, like [Cilium BGP]({{
   <line x1="285" y1="110" x2="285" y2="148" stroke="#02C8FF" stroke-width="1.6" fill="none" marker-end="url(#eg-arrow-cyan)"/>
   <line x1="370" y1="177" x2="428" y2="177" stroke="#02C8FF" stroke-width="1.6" fill="none" marker-end="url(#eg-arrow-cyan)"/>
   <line x1="580" y1="177" x2="608" y2="177" stroke="currentColor" stroke-width="1.4" fill="none" marker-end="url(#eg-arrow)"/>
-  <line x1="285" y1="110" x2="285" y2="250" stroke="currentColor" stroke-width="1" fill="none" opacity="0.4" stroke-dasharray="5 4" marker-end="url(#eg-arrow)"/>
+  <polyline points="215,110 215,132 100,132 100,226" stroke="currentColor" stroke-width="1" fill="none" opacity="0.45" stroke-dasharray="5 4" marker-end="url(#eg-arrow)"/>
+  <text x="128" y="126" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.6">node default</text>
 </svg>
 <figcaption>The app pod runs on the control-plane node, but its egress is pinned to the worker. The worker source-NATs it to 10.0.51.100 and a policy route sends that address over the fabric to the firewall, which matches a rule on 10.0.51.100 before forwarding to the internet. The node's own management traffic takes the out-of-band path and never reaches the firewall.</figcaption>
 </figure>
