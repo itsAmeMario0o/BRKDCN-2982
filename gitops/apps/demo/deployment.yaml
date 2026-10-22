@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: demo
-  namespace: demo
+  namespace: gitops-demo
   labels:
     app: demo
 spec:
