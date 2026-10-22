@@ -46,8 +46,6 @@ nav:
     url: /use-cases/
   - title: Pipeline
     url: /pipeline/
-  - title: Decisions
-    url: /decisions/
 
 # Repo metadata used in the footer and deep links back to source files.
 repo:

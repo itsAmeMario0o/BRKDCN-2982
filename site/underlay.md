@@ -3,71 +3,170 @@ layout: default
 title: The underlay
 permalink: /underlay/
 eyebrow: Build
-summary: Terraform brings the switches up and builds the single-AS iBGP underlay that carries loopback reachability, with no IGP in sight.
+summary: Build the single-AS iBGP underlay in order. Features, loopbacks, point-to-point links, then BGP with the spines as route reflectors.
 ---
 
-## What this leg owns
+The underlay has one job: make every switch loopback reachable from every other switch. The overlay rides on top of that reachability, so the underlay comes first.
 
-Terraform builds the underlay from a netascode `nac-nxos` data model. It owns bring-up and the BGP underlay: the features, the loopbacks, the point-to-point links, and the iBGP sessions that make every switch loopback reachable from every other. The `l2vpn evpn` overlay and VXLAN are the [Ansible leg]({{ '/overlay/' | relative_url }}); the Cilium peering is [its own page]({{ '/cilium-bgp/' | relative_url }}).
+The design is deliberately plain. One autonomous system for the whole fabric, 65400. iBGP over the point-to-point links, with the two spines as route reflectors. No OSPF, no IS-IS. The spines also advertise their connected `/31` links, so a leaf can resolve the next hop to a remote leaf's VTEP loopback. That last point matters later, and it is the only non-obvious piece.
 
-## The design, in one paragraph
+<figure class="diagram" role="img" aria-label="Two spines act as BGP route reflectors for four leaves. Each leaf runs iBGP to both spines over point-to-point /31 links, all in AS 65400.">
+<svg viewBox="0 0 660 300" style="max-width:100%;height:auto">
+  <text x="330" y="22" text-anchor="middle" font-size="13" fill="currentColor" opacity="0.7">AS 65400, single autonomous system</text>
+  <!-- spines -->
+  <rect x="180" y="40" width="130" height="44" rx="6" fill="none" stroke="#02C8FF" stroke-width="1.5"/>
+  <text x="245" y="60" text-anchor="middle" font-size="13" fill="currentColor">spine1</text>
+  <text x="245" y="76" text-anchor="middle" font-size="11" fill="#02C8FF">route reflector</text>
+  <rect x="350" y="40" width="130" height="44" rx="6" fill="none" stroke="#02C8FF" stroke-width="1.5"/>
+  <text x="415" y="60" text-anchor="middle" font-size="13" fill="currentColor">spine2</text>
+  <text x="415" y="76" text-anchor="middle" font-size="11" fill="#02C8FF">route reflector</text>
+  <!-- leaves -->
+  <g font-size="12" fill="currentColor">
+    <rect x="40" y="220" width="120" height="40" rx="6" fill="none" stroke="currentColor" stroke-width="1.2"/>
+    <text x="100" y="244" text-anchor="middle">leaf1</text>
+    <rect x="200" y="220" width="120" height="40" rx="6" fill="none" stroke="currentColor" stroke-width="1.2"/>
+    <text x="260" y="244" text-anchor="middle">leaf2</text>
+    <rect x="340" y="220" width="120" height="40" rx="6" fill="none" stroke="currentColor" stroke-width="1.2"/>
+    <text x="400" y="244" text-anchor="middle">leaf3</text>
+    <rect x="500" y="220" width="120" height="40" rx="6" fill="none" stroke="currentColor" stroke-width="1.2"/>
+    <text x="560" y="244" text-anchor="middle">leaf4</text>
+  </g>
+  <!-- links: every leaf to both spines -->
+  <g stroke="currentColor" stroke-width="1" opacity="0.55">
+    <line x1="100" y1="220" x2="230" y2="84"/><line x1="100" y1="220" x2="400" y2="84"/>
+    <line x1="260" y1="220" x2="235" y2="84"/><line x1="260" y1="220" x2="405" y2="84"/>
+    <line x1="400" y1="220" x2="255" y2="84"/><line x1="400" y1="220" x2="410" y2="84"/>
+    <line x1="560" y1="220" x2="260" y2="84"/><line x1="560" y1="220" x2="415" y2="84"/>
+  </g>
+  <text x="150" y="160" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.8" transform="rotate(-38 150 160)">iBGP, /31</text>
+</svg>
+<figcaption>Every leaf peers iBGP to both spines over a point-to-point /31. The spines reflect each leaf's loopbacks to the others, so no leaf-to-leaf session is needed.</figcaption>
+</figure>
 
-One AS for the whole fabric (65400). The underlay is iBGP over the point-to-point links with the spines as route-reflectors, which bootstraps loopback reachability with no OSPF or IS-IS. The spines also advertise their connected `/31` networks so a leaf can resolve another leaf's loopback next hop. Because it is a single AS, there are no eBGP knobs: no `allowas-in`, no `disable-peer-as-check`, no next-hop route-map. The cluster is its own AS (65001) and peers the leaves over eBGP, which is what lets a leaf re-originate pod routes as EVPN Type-5.
+## Addressing
 
-## How it connects
+Loopback 0 is the router ID and the BGP peering address. Loopback 1 is the VTEP source the overlay will use. The uplinks are routed `/31` point-to-point links.
 
-The `nac-nxos` module owns the `nxos` provider. The committed data model, `underlay.nac.yaml`, is the reference design and carries no device `url`. The six NX-API endpoints come from the `switch_urls` variable, and `main.tf` injects each device's URL before passing the merged model to the module. Credentials come from the `NXOS_USERNAME` and `NXOS_PASSWORD` environment variables, so there is no provider block and no password variable anywhere in the code.
+| Device | loopback0 | loopback1 | Uplinks |
+|---|---|---|---|
+| spine1 | 10.0.0.1 | n/a | Eth1/1-1/4: 10.1.1.0, .2, .4, .6 /31 (to leaf1-4) |
+| spine2 | 10.0.0.2 | n/a | Eth1/1-1/4: 10.1.2.0, .2, .4, .6 /31 (to leaf1-4) |
+| leaf1 | 10.0.0.11 | 10.0.1.11 | Eth1/1 10.1.1.1/31, Eth1/2 10.1.2.1/31 |
+| leaf2 | 10.0.0.12 | 10.0.1.12 | Eth1/1 10.1.1.3/31, Eth1/2 10.1.2.3/31 |
+| leaf3 | 10.0.0.13 | 10.0.1.13 | Eth1/1 10.1.1.5/31, Eth1/2 10.1.2.5/31 |
+| leaf4 | 10.0.0.14 | 10.0.1.14 | Eth1/1 10.1.1.7/31, Eth1/2 10.1.2.7/31 |
 
-<div class="callout callout-warning">
-<strong>One day-0 prerequisite.</strong>
-<code>feature nxapi</code> has to be on each switch before Terraform can connect at all. It is a bootstrap step on the device, not something this leg manages, because without it the provider cannot reach the box.
-</div>
+## Build order
 
-## Running it
+Work top to bottom on each switch. The spine and leaf examples below show the pattern. Repeat it for the rest of the fabric using the addressing table.
 
-Credentials come from the environment, never a file. The real endpoints go in a gitignored `terraform.tfvars`.
+### 1. Turn on BGP
 
-```bash
-export NXOS_USERNAME=admin
-export NXOS_PASSWORD=...                        # never put this in a file
-cp terraform.tfvars.example terraform.tfvars    # fill in real switch_urls (gitignored)
-terraform init
-terraform plan
-terraform apply
+```nxos
+feature bgp
 ```
 
-`switch_urls` is a map of device name to NX-API URL. Point it at the switch management addresses, or at forwarded localhost ports when you drive the fabric from a workstation. `managed_devices` narrows an apply to stage one switch first, for example `["leaf1"]`.
+### 2. Loopbacks
 
-## What is in the folder
+The spines need only loopback 0. The leaves also need loopback 1, the VTEP source.
 
-| Path | Role |
-|---|---|
-| `versions.tf` | Terraform (>= 1.9) and provider requirements, local backend. |
-| `.terraform-version` | Pins the folder to 1.9.8 via tfenv; the module needs a provider function from Terraform 1.9. |
-| `variables.tf` | `switch_urls` (required) and `managed_devices`. Credentials come from the environment, not a variable. |
-| `main.tf` | Reads the data model, injects `switch_urls`, calls the `netascode/nac-nxos/nxos` module with the merged model. |
-| `underlay.nac.yaml` | The data model: features, loopbacks, point-to-point links, and the single-AS iBGP underlay for all six switches (no `url`). |
-| `terraform.tfvars.example` | A template for the real `switch_urls`. |
-
-## Verifying
-
-After the apply, the loopbacks should be reachable fabric-wide and the underlay sessions up:
-
-```
-show bgp ipv4 unicast summary      # underlay sessions to the spines, established
-show ip bgp neighbors              # the P2P sessions and reflected loopbacks
-show ip route 10.0.0.0/24          # every leaf and spine loopback resolvable
+```nxos
+! spine1
+interface loopback0
+  ip address 10.0.0.1/32
 ```
 
-Loopback-to-loopback reachability is the whole point of this leg. The overlay's EVPN sessions run loopback to loopback, so they cannot come up until the underlay has carried those loopbacks everywhere.
+```nxos
+! leaf1
+interface loopback0
+  ip address 10.0.0.11/32
+interface loopback1
+  ip address 10.0.1.11/32
+```
+
+### 3. Point-to-point links
+
+Routed `/31` links, no switchport. Each spine faces leaf1 through leaf4 on Eth1/1 through Eth1/4.
+
+```nxos
+! spine1
+interface Ethernet1/1          ! to leaf1
+  no switchport
+  ip address 10.1.1.0/31
+  no shutdown
+interface Ethernet1/2          ! to leaf2
+  no switchport
+  ip address 10.1.1.2/31
+  no shutdown
+! Eth1/3 -> 10.1.1.4/31 (leaf3), Eth1/4 -> 10.1.1.6/31 (leaf4)
+```
+
+```nxos
+! leaf1
+interface Ethernet1/1          ! to spine1
+  no switchport
+  ip address 10.1.1.1/31
+  no shutdown
+interface Ethernet1/2          ! to spine2
+  no switchport
+  ip address 10.1.2.1/31
+  no shutdown
+```
+
+### 4. BGP underlay
+
+The spines are route reflectors. Each spine makes every leaf a `route-reflector-client`, so the leaves never peer each other directly. The spines advertise their own loopback and their connected `/31` links.
+
+```nxos
+! spine1
+router bgp 65400
+  router-id 10.0.0.1
+  address-family ipv4 unicast
+    network 10.0.0.1/32
+    network 10.1.1.0/31
+    network 10.1.1.2/31
+    network 10.1.1.4/31
+    network 10.1.1.6/31
+  neighbor 10.1.1.1             ! leaf1
+    remote-as 65400
+    address-family ipv4 unicast
+      route-reflector-client
+  neighbor 10.1.1.3             ! leaf2
+    remote-as 65400
+    address-family ipv4 unicast
+      route-reflector-client
+  ! repeat for 10.1.1.5 (leaf3) and 10.1.1.7 (leaf4)
+```
+
+Each leaf peers both spines and advertises its two loopbacks.
+
+```nxos
+! leaf1
+router bgp 65400
+  router-id 10.0.0.11
+  address-family ipv4 unicast
+    network 10.0.0.11/32
+    network 10.0.1.11/32
+  neighbor 10.1.1.0             ! spine1
+    remote-as 65400
+    address-family ipv4 unicast
+  neighbor 10.1.2.0             ! spine2
+    remote-as 65400
+    address-family ipv4 unicast
+```
+
+Why the spines advertise their `/31` links: a reflected loopback route keeps the next hop of the leaf that originated it, which is that leaf's `/31` uplink address. For leaf1 to install a route to leaf4's VTEP loopback, leaf1 must be able to resolve that next hop. Advertising the transit `/31` links puts those next hops in the table. Without it, the overlay's VTEP-to-VTEP routes would never resolve.
+
+### 5. Verify
+
+```nxos
+show bgp ipv4 unicast summary      ! both spine sessions on each leaf, established
+show ip route 10.0.1.14            ! leaf4 VTEP loopback, resolved via a transit /31
+```
+
+Loopback-to-loopback reachability across the fabric is the finish line for this stage. The overlay's EVPN sessions run loopback to loopback, so they cannot form until the underlay carries those loopbacks everywhere.
 
 <div class="callout">
-<strong>The BGP seam.</strong>
-Both legs touch <code>router bgp</code>. Terraform owns the underlay neighbors (the point-to-point sessions, IPv4 unicast); Ansible owns the overlay neighbors (loopback to loopback, <code>l2vpn evpn</code>) and the tenant VRF address family. They manage disjoint neighbors, so re-running one leg does not disturb the other.
+<strong>On automation.</strong>
+The intended way to build this is network as code: a Terraform run against the netascode <code>nac-nxos</code> model in <a href="https://github.com/{{ site.repo.owner }}/{{ site.repo.name }}/tree/{{ site.repo.branch }}/terraform">terraform/</a>. That path is a work in progress and does not yet apply cleanly to the current topology, so the CLI above is the source of truth for now.
 </div>
-
-## State and credentials
-
-State is local (`terraform.tfstate`, gitignored). Never commit state, a real credential, or a real endpoint. Supply `switch_urls` through the gitignored `terraform.tfvars` and the password through `NXOS_PASSWORD` in the environment.
-
-Source: [`terraform/`](https://github.com/{{ site.repo.owner }}/{{ site.repo.name }}/tree/{{ site.repo.branch }}/terraform) and ADR [0002]({{ '/decisions/' | relative_url }}).

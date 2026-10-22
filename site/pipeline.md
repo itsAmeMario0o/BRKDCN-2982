@@ -34,7 +34,7 @@ kubectl -n argocd get applications
 kubectl -n demo get deploy,pods -o wide
 ```
 
-See ADR [0001]({{ '/decisions/' | relative_url }}) for why GitOps, and why this repo is the source of truth rather than the environment that provisions the switches.
+See ADR [0001](https://github.com/{{ site.repo.owner }}/{{ site.repo.name }}/tree/{{ site.repo.branch }}/docs/decisions) for why GitOps, and why this repo is the source of truth rather than the environment that provisions the switches.
 
 ## Fabric lane: a self-hosted runner
 
@@ -49,10 +49,10 @@ A self-hosted runner attached to a public repository is a known hazard: a fork c
 
 The apply model is full continuous delivery: a push to `main` runs `terraform init`, `plan`, and `apply`, then `ansible-playbook`, then pyATS, with no manual gate. pyATS runs after the apply and fails the build loudly if the fabric is wrong. When the switch console is not reachable, the pyATS step reports a clean skip rather than failing the apply for the wrong reason.
 
-See ADR [0003]({{ '/decisions/' | relative_url }}) for the full trade-off, including the one-click gate that is the obvious upgrade path if the no-gate choice changes.
+See ADR [0003](https://github.com/{{ site.repo.owner }}/{{ site.repo.name }}/tree/{{ site.repo.branch }}/docs/decisions) for the full trade-off, including the one-click gate that is the obvious upgrade path if the no-gate choice changes.
 
 ## The docs lane
 
 This site is a third, much smaller lane. A separate workflow builds the Jekyll site under `site/` and publishes it to GitHub Pages on any push to `main` that touches `site/`. It is independent of the fabric apply workflow, so editing a page never touches a switch.
 
-Source: [`gitops/`](https://github.com/{{ site.repo.owner }}/{{ site.repo.name }}/tree/{{ site.repo.branch }}/gitops), the fabric workflow at [`.github/workflows/fabric.yml`](https://github.com/{{ site.repo.owner }}/{{ site.repo.name }}/blob/{{ site.repo.branch }}/.github/workflows/fabric.yml), and the [decisions]({{ '/decisions/' | relative_url }}).
+Source: [`gitops/`](https://github.com/{{ site.repo.owner }}/{{ site.repo.name }}/tree/{{ site.repo.branch }}/gitops), the fabric workflow at [`.github/workflows/fabric.yml`](https://github.com/{{ site.repo.owner }}/{{ site.repo.name }}/blob/{{ site.repo.branch }}/.github/workflows/fabric.yml), and the [decisions](https://github.com/{{ site.repo.owner }}/{{ site.repo.name }}/tree/{{ site.repo.branch }}/docs/decisions).

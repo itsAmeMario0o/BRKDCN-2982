@@ -64,5 +64,5 @@ That one seam is what makes this a fabric lab rather than a single-cluster one. 
 
 <div class="callout">
 <strong>Design records.</strong>
-The reasoning behind the split between this repo and the environment that provisions the switches, and behind the pipeline choices, lives in the <a href="{{ '/decisions/' | relative_url }}">architectural decisions</a>.
+The reasoning behind the split between this repo and the environment that provisions the switches, and behind the pipeline choices, lives in the <a href="https://github.com/{{ site.repo.owner }}/{{ site.repo.name }}/tree/{{ site.repo.branch }}/docs/decisions">architectural decisions</a>.
 </div>
