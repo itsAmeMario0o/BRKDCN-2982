@@ -28,8 +28,8 @@ express.
 ## The demo app
 
 One small Python app in [`app/`](app/), standard library only, run as three
-tiers through the `ROLE` env var: a `frontend` with a tiny web UI and a probe
-endpoint, a `backend` that answers any `GET` with 200, and a `database`
+tiers through the `ROLE` env var: a `frontend` with a tiny web UI, a
+`backend` that answers any `GET` with 200, and a `database`
 stand-in that just holds its port open. Because the backend answers everything,
 a 403 you see later is the policy talking, not the app.
 
@@ -61,42 +61,40 @@ The policy YAML here is original to this repo.
 
 ```bash
 kubectl apply -f 00-demo-app.yaml
-kubectl -n demo rollout status deploy/backend deploy/frontend deploy/database
+kubectl -n demo rollout status deploy/frontend deploy/backend deploy/database
 
-# a short alias for the probes, all run from inside the frontend pod
-B="kubectl exec -n demo deploy/frontend -- curl -s --max-time 3"
+# run curl from inside the frontend pod and print just the HTTP status
+fe() { kubectl exec -n demo deploy/frontend -- curl -s -o /dev/null -w "%{http_code}\n" --max-time 5 "$1"; }
 
-# baseline, no policy yet: backend and the internet are reachable
-$B http://backend:8081/api/health            # 200 ok
-$B https://api.github.com | head -c 40        # reachable
+fe http://backend:8081/api/health        # baseline: 200
 
 kubectl apply -f 01-default-deny.yaml
-$B http://backend:8081/api/health || echo "denied (expected): the name does not even resolve"
+fe http://backend:8081/api/health        # 000, blocked: the default-deny policy drops it
 
-kubectl apply -f 02-dns-allow.yaml            # names resolve again, but TCP is still denied
-kubectl apply -f 03-l4-allow.yaml
-$B http://backend:8081/api/health            # 200 ok again
+kubectl apply -f 02-dns-allow.yaml        # names resolve again
+kubectl apply -f 03-l4-allow.yaml         # allow frontend to reach backend on 8081
+fe http://backend:8081/api/health        # 200 again
+fe http://database:5432/                  # 000, the database stays blocked
 
-kubectl apply -f 04-l7-allow.yaml
-$B http://backend:8081/api/health            # GET /api/... allowed
-$B http://backend:8081/private || echo "L7 denied (403, expected)"
+kubectl apply -f 04-l7-allow.yaml         # allow only GET /api/...
+fe http://backend:8081/api/health        # 200
+fe http://backend:8081/private            # 403, the Envoy proxy denies the path
 
 kubectl apply -f 05-fqdn-egress.yaml
-$B https://api.github.com | head -c 40        # the one allowed name
-$B https://example.com || echo "other names denied (expected)"
+fe https://api.github.com/                # 200, the one allowed name
+fe https://example.com/                   # 000, every other name is denied
 
-kubectl apply -f 06-clusterwide-deny.yaml     # metadata egress now denied cluster-wide
+kubectl apply -f 06-clusterwide-deny.yaml   # deny metadata egress cluster-wide
 ```
 
-You can also open the frontend's web UI with a port-forward and click each
-probe. To reach the UI under default-deny, allow ingress to the frontend as
-well; the probes above need only the egress rules.
+The frontend also serves a web UI. Run `kubectl -n demo port-forward deploy/frontend 8080:8080` and open `http://localhost:8080` to drive the same checks from buttons. Under default-deny you must also allow ingress to the frontend to reach the UI; the curl checks above need only the egress rules.
 
 ## Verify
 
 ```bash
-kubectl get networkpolicies,ciliumnetworkpolicies -n demo
-kubectl get ciliumclusterwidenetworkpolicies
+kubectl get networkpolicies -n demo            # the Kubernetes NetworkPolicies (01, 02)
+kubectl get ciliumnetworkpolicies -n demo      # the CiliumNetworkPolicies (03, 04, 05)
+kubectl get ciliumclusterwidenetworkpolicies   # the cluster-wide policy (06)
 cilium policy get
 ```
 

@@ -57,7 +57,7 @@ The first two policies are standard Kubernetes `NetworkPolicy`, portable across 
 
 **The demo app**
 
-One small Python app (standard library only) runs as three tiers through a `ROLE` variable: a `frontend` with a web UI and a probe endpoint, a `backend` that answers any `GET` with 200, and a `database` stand-in. Build it and make it available to the cluster first: `docker build -t connectivity-tester:latest app/`, then push or load the image.
+One small Python app (standard library only) runs as three tiers through a `ROLE` variable: a `frontend` with a web UI, a `backend` that answers any `GET` with 200, and a `database` stand-in. Build it and make it available to the cluster first: `docker build -t connectivity-tester:latest app/`, then push or load the image.
 
 **Manifests**
 
@@ -78,45 +78,40 @@ kubectl apply -f 00-demo-app.yaml
 kubectl -n demo rollout status deploy/backend deploy/frontend deploy/database
 ```
 
-The frontend serves a web UI with probe buttons. Forward it and drive the demo from a browser, re-testing after each policy:
+Run curl from inside the frontend pod and watch the HTTP status change as each policy applies. This helper runs curl in the frontend pod and prints the status code:
 
 ```bash
-kubectl -n demo port-forward deploy/frontend 8080:8080
-# open http://localhost:8080 and run the DNS, TCP, and HTTP probes
-```
+fe() { kubectl exec -n demo deploy/frontend -- curl -s -o /dev/null -w "%{http_code}\n" --max-time 5 "$1"; }
 
-To drive it from the CLI instead, call the frontend's `/check` endpoint. The image has no `curl`, so use its own Python. This helper returns a JSON verdict for each probe:
-
-```bash
-probe() { kubectl exec -n demo deploy/frontend -- \
-  python -c "import urllib.request as u,sys;print(u.urlopen('http://localhost:8080/check?'+sys.argv[1]).read().decode())" "$1"; }
-
-probe 'type=http&target=backend&port=8081&path=/api/health'   # baseline: ok, http 200
+fe http://backend:8081/api/health        # baseline: 200
 
 kubectl apply -f 01-default-deny.yaml
-probe 'type=tcp&target=backend&port=8081'      # ok:false, blocked (DNS and TCP both denied)
+fe http://backend:8081/api/health        # 000, blocked: the default-deny policy drops it
 
-kubectl apply -f 02-dns-allow.yaml             # names resolve again, TCP still denied
-kubectl apply -f 03-l4-allow.yaml
-probe 'type=http&target=backend&port=8081&path=/api/health'   # ok:true, http 200 again
-probe 'type=tcp&target=database&port=5432'     # ok:false, database stays blocked
+kubectl apply -f 02-dns-allow.yaml        # names resolve again
+kubectl apply -f 03-l4-allow.yaml         # allow frontend to reach backend on 8081
+fe http://backend:8081/api/health        # 200 again
+fe http://database:5432/                  # 000, the database stays blocked
 
-kubectl apply -f 04-l7-allow.yaml
-probe 'type=http&target=backend&port=8081&path=/api/health'   # ok:true, GET /api/... allowed
-probe 'type=http&target=backend&port=8081&path=/private'      # ok:false, http 403 from the proxy
+kubectl apply -f 04-l7-allow.yaml         # allow only GET /api/...
+fe http://backend:8081/api/health        # 200
+fe http://backend:8081/private            # 403, the Envoy proxy denies the path
 
 kubectl apply -f 05-fqdn-egress.yaml
-probe 'type=https&target=api.github.com&path=/'   # ok:true, the one allowed name
-probe 'type=https&target=example.com&path=/'      # ok:false, other names denied
+fe https://api.github.com/                # 200, the one allowed name
+fe https://example.com/                   # 000, every other name is denied
 
-kubectl apply -f 06-clusterwide-deny.yaml      # metadata egress denied cluster-wide
+kubectl apply -f 06-clusterwide-deny.yaml   # deny metadata egress cluster-wide
 ```
+
+The frontend also serves a web UI. Run `kubectl -n demo port-forward deploy/frontend 8080:8080` and open `http://localhost:8080` to drive the same DNS, TCP, and HTTP checks from buttons.
 
 **Verify**
 
 ```bash
-kubectl get networkpolicies,ciliumnetworkpolicies -n demo
-kubectl get ciliumclusterwidenetworkpolicies
+kubectl get networkpolicies -n demo            # the Kubernetes NetworkPolicies (01, 02)
+kubectl get ciliumnetworkpolicies -n demo      # the CiliumNetworkPolicies (03, 04, 05)
+kubectl get ciliumclusterwidenetworkpolicies   # the cluster-wide policy (06)
 ```
 
 Watch the verdicts land in use case 2: `hubble observe --namespace demo --verdict DROPPED`.

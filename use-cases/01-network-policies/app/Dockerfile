@@ -1,6 +1,10 @@
 FROM python:3.12-slim
-# The app uses the Python standard library only, so it installs no packages.
-# The demo's probes call the app's /check endpoint, not curl.
+# The app itself uses the Python standard library only. curl is installed so the
+# demo's "kubectl exec ... curl" checks use curl, the natural tool for a lab.
+# hadolint ignore=DL3008
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY app.py .
 COPY static ./static
