@@ -243,7 +243,7 @@ The leaves need nothing beyond the `rp-address` line and PIM on their interfaces
     <line x1="400" y1="98" x2="415" y2="240" marker-end="url(#ul-arrow)"/>
     <line x1="440" y1="98" x2="570" y2="240" marker-end="url(#ul-arrow)"/>
   </g>
-  <text x="470" y="175" font-size="10" fill="#02C8FF" transform="rotate(60 470 175)">replicate down the tree</text>
+  <text x="516" y="159" text-anchor="middle" font-size="10" fill="#02C8FF" transform="rotate(48 516 159)">replicate down the tree</text>
 </svg>
 <figcaption>A broadcast from leaf1 travels up to the anycast rendezvous point once. The spine replicates it down the shared tree only to the leaves that joined the group. Leaf2 never joined, so it receives nothing. This replaces head-end replication, where the source leaf would copy the frame to every other VTEP itself.</figcaption>
 </figure>

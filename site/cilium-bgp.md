@@ -12,6 +12,10 @@ Advertise pod CIDRs out of the cluster over eBGP, let the leaves re-originate th
 
 This is the use case the lab is built for. The two [other use cases]({{ '/use-cases/' | relative_url }}) run on any Cilium cluster. This one needs a real spine-leaf fabric underneath, which is exactly what the [underlay]({{ '/underlay/' | relative_url }}) and [overlay]({{ '/overlay/' | relative_url }}) stand up.
 
+{% include overview-diagram.html cluster_as=true %}
+
+Three autonomous systems meet here. The fabric is one AS (65400), the cluster is its own (65001), and the border runs a third (65500) out to the ASA. Each node holds an eBGP session to the leaf it hangs off, and that session is the whole seam: the node advertises its PodCIDR southbound, the leaf re-originates it as EVPN northbound.
+
 ## The path a pod prefix takes
 
 ```
