@@ -34,6 +34,8 @@ plugins:
 nav:
   - title: Overview
     url: /
+  - title: Crash course
+    url: /crash-course/
   - title: Architecture
     url: /architecture/
   - title: Underlay
