@@ -1,0 +1,11 @@
+# Local Jekyll dependencies for previewing the site. CI uses
+# actions/jekyll-build-pages, which pins its own bundle. Keep this in sync if
+# you preview locally with `bundle exec jekyll serve` from the site/ directory.
+
+source "https://rubygems.org"
+
+gem "jekyll", "~> 3.10"
+gem "jekyll-seo-tag", "~> 2.8"
+gem "jekyll-sitemap", "~> 1.4"
+gem "kramdown-parser-gfm", "~> 1.1"
+gem "webrick", "~> 1.8"

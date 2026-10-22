@@ -1,0 +1,70 @@
+# Jekyll configuration for the BRKDCN-2982 workshop site.
+# The build runs in CI through .github/workflows/pages.yaml.
+
+title: BRKDCN-2982 Workshop
+description: >-
+  Build a single-AS NX-OS VXLAN BGP EVPN fabric and peer a Kubernetes cluster
+  into it with Cilium BGP, so pod CIDRs leave the cluster as EVPN Type-5 routes.
+author: Mario Ruiz
+
+# baseurl is the path the site is served from on github.io.
+# For https://<user>.github.io/BRKDCN-2982/ this must be "/BRKDCN-2982".
+# If a custom domain is mapped through CNAME, set baseurl to "".
+baseurl: "/BRKDCN-2982"
+url: ""
+
+markdown: kramdown
+kramdown:
+  syntax_highlighter: rouge
+  input: GFM
+  hard_wrap: false
+
+permalink: pretty
+
+# No external theme. Layouts live in _layouts/, styles in assets/css/.
+theme: null
+
+plugins:
+  - jekyll-seo-tag
+  - jekyll-sitemap
+
+# Ordered nav rendered by _includes/nav.html. The order follows the workshop
+# flow: understand the design, build the fabric bottom up, peer the cluster,
+# then the use cases and the pipeline that keeps it all applied.
+nav:
+  - title: Overview
+    url: /
+  - title: Architecture
+    url: /architecture/
+  - title: Underlay
+    url: /underlay/
+  - title: Overlay
+    url: /overlay/
+  - title: Cilium BGP
+    url: /cilium-bgp/
+  - title: Use cases
+    url: /use-cases/
+  - title: Pipeline
+    url: /pipeline/
+  - title: Decisions
+    url: /decisions/
+
+# Repo metadata used in the footer and deep links back to source files.
+repo:
+  owner: itsAmeMario0o
+  name: BRKDCN-2982
+  branch: main
+
+defaults:
+  - scope:
+      path: ""
+      type: pages
+    values:
+      layout: default
+
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - vendor/
+  - .bundle/
+  - README.md

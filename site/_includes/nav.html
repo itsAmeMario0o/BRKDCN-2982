@@ -1,0 +1,15 @@
+<ul id="nav-links" class="nav-links">
+  {% for item in site.nav %}
+    {% assign target = item.url | relative_url %}
+    {% assign is_home = false %}
+    {% if item.url == "/" %}{% assign is_home = true %}{% endif %}
+    {% assign active = false %}
+    {% if is_home and page.url == "/" %}{% assign active = true %}{% endif %}
+    {% unless is_home %}
+      {% if page.url contains item.url %}{% assign active = true %}{% endif %}
+    {% endunless %}
+    <li>
+      <a class="nav-link" href="{{ target }}"{% if active %} aria-current="page"{% endif %}>{{ item.title }}</a>
+    </li>
+  {% endfor %}
+</ul>
