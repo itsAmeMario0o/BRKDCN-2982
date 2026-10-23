@@ -100,7 +100,7 @@ hubble observe --namespace demo --verdict DROPPED --last 5
 
 **Why.** Hubble reads the same eBPF data path that enforces the policy, so every allow and deny is visible with source and destination identity, port, and verdict. There is no sidecar and no change to the application.
 
-## 8. Use case 3, Cilium BGP, pods as fabric routes
+## 8. Cilium BGP: pods as fabric routes
 
 ```bash
 cilium bgp routes advertised ipv4 unicast
@@ -139,7 +139,7 @@ Open the `hubble_fabric_observability` dashboard in Splunk. The verdict breakdow
 
 **Why.** Hubble gives real-time flow visibility, and Splunk keeps the history and the dashboards that a security team already uses. One exporter ships Hubble flows into the same OpenTelemetry (OTel) pipeline that carries cluster logs and metrics. The Flow verdicts panel shows FORWARDED against DROPPED, and a use-case-1 drop appears there, which connects enforcement to observability. See [Observability]({{ '/observability/' | relative_url }}).
 
-## 11. GitOps, why it stays applied
+## 11. GitOps
 
 ```bash
 kubectl -n argocd get applications      # the root application reports Synced and Healthy

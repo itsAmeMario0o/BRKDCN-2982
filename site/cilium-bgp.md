@@ -6,7 +6,7 @@ eyebrow: Peer
 summary: The cluster becomes its own autonomous system and advertises pod CIDRs into the leaves, which re-originate them as EVPN Type-5 routes.
 ---
 
-## The idea
+## How pod routes reach the fabric
 
 Advertise pod CIDRs (Classless Inter-Domain Routing blocks) out of the cluster over eBGP (external BGP, Border Gateway Protocol), let the leaves re-originate them as EVPN (Ethernet VPN) Type-5 routes, and reach a pod from anywhere on the physical fabric. There is no overlay tunnel to the host and no static routes. The pod network is just another prefix in the fabric's routing table.
 
@@ -16,7 +16,7 @@ Cilium BGP is the use case that the lab is built for. The two [other use cases](
 
 Three autonomous systems (AS) meet here. The fabric is one AS (65400), the cluster is its own (65001), and the border runs a third (65500) out to the firewall. Each node holds an eBGP session to the leaf that it attaches to. That session is the whole seam: the node advertises its PodCIDR southbound, and the leaf re-originates it as EVPN northbound.
 
-## The path a pod prefix takes
+## Pod prefix path
 
 ```
 pod (10.244.x.0/24)
@@ -30,7 +30,7 @@ pod (10.244.x.0/24)
 
 The cluster speaks plain eBGP and carries no EVPN configuration. The leaf is the seam: BGP IPv4 unicast on the south side, `l2vpn evpn` on the north side.
 
-## What runs on a node
+## On the node
 
 Cilium runs one `cilium-agent` on every node, as a DaemonSet. The agent does three jobs at once. First, the agent is the CNI (Container Network Interface) plugin that wires each pod into the kernel. Second, the agent compiles and loads the eBPF programs that forward and filter traffic, which is how Cilium replaces kube-proxy and the iptables path. Third, the agent runs an embedded BGP speaker that peers the leaf and advertises the node's PodCIDR. Pod traffic leaves the node natively, as routed IP. There is no VXLAN (Virtual Extensible LAN) tunnel from the node to the host.
 

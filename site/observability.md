@@ -6,7 +6,7 @@ eyebrow: Operate
 summary: Two signals reach Splunk: cluster logs and metrics through an OpenTelemetry Collector, and network flows through Hubble. A policy drop then has a visible answer and a history.
 ---
 
-## The idea
+## Two signals to Splunk
 
 The cluster sends two signals to Splunk, and together they answer two different questions. Cluster logs and metrics answer "what is the cluster doing?" Network flows answer "what is talking to what, and did policy allow it?" Both signals use one pipeline into Splunk, and both arrive under their own index and sourcetype so a search can separate them.
 
@@ -102,7 +102,7 @@ index=k8s sourcetype=cilium:hubble:flows
 
 The flow records connect the policy to its evidence. When use case 1 applies a network policy that blocks `demo/frontend` from reaching `demo/database`, that blocked attempt appears here as a DROPPED flow between those two identities. The policy you wrote and the drop you can see are the same event, observed from the eBPF datapath that enforced it.
 
-## Why it matters
+## A policy drop, end to end
 
 The question operators ask is "why was this blocked?" The answer is visible here. The datapath that enforces policy is the datapath that Hubble observes, so a drop is never a guess; it is a flow record with a verdict and the two identities on it. Hubble UI shows it live, and Splunk keeps the history, so the same answer is there an hour later when someone asks what happened.
 

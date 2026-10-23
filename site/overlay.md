@@ -37,7 +37,7 @@ The result is a symmetric IRB (integrated routing and bridging) fabric. One tena
 <figcaption>The spines reflect EVPN routes between VTEPs (VXLAN tunnel endpoints). Data rides VXLAN tunnels leaf to leaf. A vPC (virtual Port Channel) pair shares one anycast VTEP address, so the rest of the fabric routes to the pair as a single next hop.</figcaption>
 </figure>
 
-## The scheme
+## Overlay addressing
 
 | Object | VLAN | VNI | Subnet | Multicast group |
 |---|---|---|---|---|
@@ -51,7 +51,7 @@ Anycast gateway MAC is `0000.0000.1234`, the same fabric-wide. The VTEP sources 
 
 Each L2 VNI maps to one multicast group in the `239.0.0.0/8` range that the underlay reserved for the rendezvous point. The L3 VNI requires no group, because it is a routed transit segment between VTEPs and carries no broadcast. The node subnets, VLANs 50 and 51, are where the Kubernetes nodes attach. The [Cilium BGP]({{ '/cilium-bgp/' | relative_url }}) page builds on them.
 
-## How a packet crosses the fabric
+## A packet across the fabric
 
 Symmetric IRB moves traffic between two subnets on two different leaves in a fixed sequence: bridge, route, route, bridge. The L2 VNIs stay local to each leaf. The routing between them happens over the L3 VNI, a transit segment that only the VTEPs use.
 

@@ -107,7 +107,7 @@ cilium policy get
 Watch the verdicts land in [use case 2](../02-hubble/), which installs the
 Hubble CLI first: `hubble observe --namespace demo --verdict DROPPED`.
 
-## A note on the cluster-wide rule
+## The cluster-wide rule
 
 `06-clusterwide-deny.yaml` is a portable pattern worth keeping in any cluster.
 A `CiliumClusterwideNetworkPolicy` with an empty `endpointSelector` applies to

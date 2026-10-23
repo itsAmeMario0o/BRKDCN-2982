@@ -129,7 +129,7 @@ cilium bgp peers                       # sessions to the leaves established
 cilium bgp routes advertised ipv4 unicast   # the node's PodCIDR, next hop the node IP
 ```
 
-## What good looks like
+## Expected results
 
 | Hop | Command | Expect |
 |-----|---------|--------|

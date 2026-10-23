@@ -21,7 +21,7 @@ hide_page_header: true
 
 {% include overview-diagram.html %}
 
-## What you will build
+## What you build
 
 You build a data center fabric and a cluster that speak the same routing language.
 
@@ -31,7 +31,7 @@ Beside the fabric sits a Kubernetes cluster running Cilium as its CNI (Container
 
 Everything here is code: a Terraform data model for the underlay, an Ansible data model for the overlay, Cilium CRDs (custom resource definitions) for the peering, and a GitOps and CI (continuous integration) pipeline that keeps everything applied.
 
-## The prefix's journey, in one picture
+## The prefix's path
 
 The point of the whole lab is a single path. A pod address leaves the cluster as plain BGP and arrives on every tunnel endpoint as an EVPN route. The cluster carries no EVPN configuration.
 
@@ -94,7 +94,7 @@ The leaf is the seam: BGP IPv4 unicast faces the cluster, and `l2vpn evpn` faces
   </li>
 </ul>
 
-## Read and run it anywhere
+## Run it anywhere
 
 This repository is the portable source of truth for the fabric-as-code and its pipeline. The repository carries no secrets and no live addresses. The committed data models are the reference design, with placeholder endpoints. The operator supplies real device addresses and credentials at run time, so the lab reads and runs against any fabric that matches the design, not just one environment.
 

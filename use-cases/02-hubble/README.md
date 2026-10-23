@@ -7,7 +7,7 @@ Hubble is Cilium's observability layer. It reads the same eBPF (extended Berkele
 Packet Filter) data path that enforces policy in use case 1, so "why was this
 dropped?" has an answer you can see rather than guess.
 
-## Can this lab run Hubble? Yes.
+## What Hubble needs
 
 Hubble is not separate infrastructure. It is `hubble-relay` and `hubble-ui`,
 two small pods, enabled on the Cilium install you already have. Any cluster

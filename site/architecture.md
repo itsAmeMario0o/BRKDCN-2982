@@ -6,7 +6,7 @@ eyebrow: Plan
 summary: One autonomous system for the whole fabric, a cluster that is its own AS, and a leaf that sits on the seam between plain BGP and EVPN.
 ---
 
-## The whole thing on one page
+## Fabric overview
 
 Six Nexus switches make the fabric: two spines and four leaves. Everything runs in a single BGP (Border Gateway Protocol) autonomous system (AS), 65400. There is no OSPF and no IS-IS. The underlay is iBGP over the point-to-point links, with the spines as route-reflectors, and that is enough to bootstrap reachability between every switch loopback.
 
@@ -26,7 +26,7 @@ A single-AS design keeps the fabric quiet. Because every switch shares one AS nu
 | Overlay | iBGP, `l2vpn evpn`, loopback to loopback | EVPN route-reflectors (`retain route-target all`) |
 | Cluster peering | eBGP, IPv4 unicast, node to leaf | Not involved; the leaf is the edge |
 
-## The roles each switch plays
+## Switch roles
 
 <div class="phase">
   <h3><span class="step-num">S</span> Spines</h3>
@@ -163,7 +163,7 @@ Inside the node, that bond is one of two network paths. The bonded pair carries 
 <figcaption>Inside a node. Two virtual NICs bond into <code>bond0</code> for the fabric, a static LAG with MTU (maximum transmission unit) 1400 to fit the VXLAN overhead, carrying the node address and the egress-gateway IP 10.0.51.100. A separate out-of-band NIC holds the default route, so pulls and telemetry bypass the rate-limited firewall path.</figcaption>
 </figure>
 
-## The seam, stated plainly
+## Where BGP meets EVPN
 
 The cluster speaks plain eBGP and carries no EVPN configuration. The leaf does the translation: it learns the pod prefix as an ordinary IPv4 route in the tenant VRF, then re-originates it as an EVPN Type-5 (IP prefix) route. The spines reflect that route to every other leaf, and any tunnel endpoint can now forward to the pod across VXLAN.
 

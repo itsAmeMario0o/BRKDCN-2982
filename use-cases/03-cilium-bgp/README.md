@@ -1,4 +1,4 @@
-# Use case 3: Cilium BGP (the "Network" one)
+# Use case 3: Cilium BGP
 
 **Advertise pod CIDRs (Classless Inter-Domain Routing ranges) out of the
 cluster over eBGP (external Border Gateway Protocol), let the leaves
