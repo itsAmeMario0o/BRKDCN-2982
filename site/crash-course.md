@@ -91,6 +91,8 @@ fe http://backend:8081/private                         # 403 the path is denied
 
 ## 7. Use case 2, Hubble
 
+Install the Hubble CLI first if the node does not have it (see [Use cases]({{ '/use-cases/' | relative_url }}#use-case-2-hubble)), then:
+
 ```bash
 cilium hubble port-forward &
 hubble observe --namespace demo --verdict DROPPED --last 5

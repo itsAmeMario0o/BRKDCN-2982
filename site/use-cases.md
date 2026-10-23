@@ -57,7 +57,7 @@ The first two policies are standard Kubernetes `NetworkPolicy`, portable across 
 
 **The demo app**
 
-One small Python app (standard library only) runs as three tiers through a `ROLE` variable: a `frontend` with a web UI, a `backend` that answers any `GET` with 200, and a `database` stand-in. Build it and make it available to the cluster first: `docker build -t connectivity-tester:latest app/`, then push or load the image.
+One small Python app (standard library only) runs as three tiers through a `ROLE` variable: a `frontend` with a web UI, a `backend` that answers any `GET` with 200, and a `database` stand-in. Because the app is standard library only, no build and no registry are needed: `00-demo-app.yaml` runs it on the stock `python:3.12-slim` image with the source carried in a ConfigMap. Just `kubectl apply -f 00-demo-app.yaml`. If your cluster can pull from a registry, you can `docker build -t connectivity-tester:latest app/` instead and set that image back in the manifest.
 
 **Manifests**
 
@@ -138,6 +138,19 @@ cilium status | grep -i hubble        # wait for Hubble: OK and hubble-ui: OK
 ```
 
 On a Helm-managed install, enable Hubble through Helm values instead (`hubble.relay.enabled=true`, `hubble.ui.enabled=true`), so a later `helm upgrade` does not revert it. `cilium hubble enable` edits the ConfigMap directly and Helm can undo it.
+
+Install the Hubble CLI first (one-time, on the control-plane node). The nodes
+have no `go`, so select the architecture with `uname -m`, not `go env`:
+
+```bash
+HUBBLE_ARCH=amd64; [ "$(uname -m)" = "aarch64" ] && HUBBLE_ARCH=arm64
+HUBBLE_VERSION=$(curl -s https://raw.githubusercontent.com/cilium/hubble/master/stable.txt)
+curl -L --fail --remote-name-all \
+  https://github.com/cilium/hubble/releases/download/${HUBBLE_VERSION}/hubble-linux-${HUBBLE_ARCH}.tar.gz{,.sha256sum}
+sha256sum --check hubble-linux-${HUBBLE_ARCH}.tar.gz.sha256sum
+sudo tar xzf hubble-linux-${HUBBLE_ARCH}.tar.gz -C /usr/local/bin
+rm hubble-linux-${HUBBLE_ARCH}.tar.gz{,.sha256sum}
+```
 
 ```bash
 cilium hubble port-forward &          # relay on localhost:4245

@@ -33,12 +33,18 @@ tiers through the `ROLE` env var: a `frontend` with a tiny web UI, a
 stand-in that just holds its port open. Because the backend answers everything,
 a 403 you see later is the policy talking, not the app.
 
-Build it and make it reachable by the cluster before you apply anything:
+No build and no registry needed. The app is standard library only, so
+`00-demo-app.yaml` runs it on the stock `python:3.12-slim` image with the two
+source files ([`app/app.py`](app/app.py) and
+[`app/static/index.html`](app/static/index.html)) carried in a ConfigMap. Just
+apply it (next section).
+
+If your cluster can pull from a registry, you can build the image instead and
+set `image: connectivity-tester:latest` back in `00-demo-app.yaml`:
 
 ```bash
 docker build -t connectivity-tester:latest app/
-# then make the image available to your cluster: push it to a registry the
-# cluster can pull from, or load it onto the nodes with your tooling.
+# then push it to a registry the cluster can pull from, or load it onto the nodes.
 ```
 
 ## Manifests
@@ -98,8 +104,8 @@ kubectl get ciliumclusterwidenetworkpolicies   # the cluster-wide policy (06)
 cilium policy get
 ```
 
-Watch the verdicts land in [use case 2](../02-hubble/):
-`hubble observe --namespace demo --verdict DROPPED`.
+Watch the verdicts land in [use case 2](../02-hubble/), which installs the
+Hubble CLI first: `hubble observe --namespace demo --verdict DROPPED`.
 
 ## A note on the cluster-wide rule
 

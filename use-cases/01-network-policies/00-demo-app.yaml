@@ -1,10 +1,163 @@
-# The demo namespace and its three tiers. All three run the same image
-# (build it from ./app) with a different ROLE. Build and load it onto the
-# cluster before applying: see this folder's README.
+# The demo namespace and its three tiers. All three run the same code with a
+# different ROLE. The code is pure Python standard library, so this runs on the
+# stock python:3.12-slim image with the two source files carried in a ConfigMap:
+# no registry, no image build, no pip. Just:
+#
+#     kubectl apply -f 00-demo-app.yaml
+#
+# If you have a registry the cluster can reach, build ./app instead (see this
+# folder's README) and swap the image back to connectivity-tester:latest.
 apiVersion: v1
 kind: Namespace
 metadata:
   name: demo
+---
+# The app source, mounted into each pod. Keep in sync with ./app if you change
+# the code there. frontend reads static/index.html; backend and database don't.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-src
+  namespace: demo
+data:
+  app.py: |
+    #!/usr/bin/env python3
+    """Connectivity tester. One image, three roles chosen by the ROLE env var.
+
+    - frontend: serves a small web UI and a /check endpoint that probes DNS, TCP,
+      and HTTP reachability from inside the pod.
+    - backend:  answers GET on any path with 200, so a 403 seen by a client is the
+      network policy talking, not the app.
+    - database: a stand-in target that just holds its port open.
+
+    No third-party dependencies. Standard library only.
+    """
+    import json
+    import os
+    import socket
+    import urllib.error
+    import urllib.request
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+    from urllib.parse import parse_qs, urlparse
+
+    ROLE = os.environ.get("ROLE", "frontend")
+    PORT = int(os.environ.get("PORT", "8080"))
+    HERE = os.path.dirname(os.path.abspath(__file__))
+
+
+    def probe(kind, target, port, path):
+        """Return (ok, detail) for one reachability test. Never raises."""
+        try:
+            if kind == "dns":
+                socket.getaddrinfo(target, None)
+                return True, f"resolved {target}"
+            if kind == "tcp":
+                with socket.create_connection((target, int(port)), timeout=3):
+                    return True, f"tcp {target}:{port} open"
+            if kind == "http":
+                url = f"http://{target}:{port}{path}"
+                with urllib.request.urlopen(url, timeout=3) as r:  # noqa: S310 (internal demo)
+                    return True, f"http {r.status} {url}"
+            if kind == "https":
+                url = f"https://{target}{path}"
+                with urllib.request.urlopen(url, timeout=4) as r:  # noqa: S310
+                    return True, f"https {r.status} {target}"
+        except urllib.error.HTTPError as e:
+            return False, f"http {e.code}"
+        except Exception as e:  # noqa: BLE001 (surface any failure to the UI)
+            return False, f"{type(e).__name__}: {e}"
+        return False, "unknown probe type"
+
+
+    class Handler(BaseHTTPRequestHandler):
+        def _send(self, code, body, ctype="text/plain"):
+            b = body.encode() if isinstance(body, str) else body
+            self.send_response(code)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(b)))
+            self.end_headers()
+            self.wfile.write(b)
+
+        def do_GET(self):
+            u = urlparse(self.path)
+            if ROLE == "frontend" and u.path == "/":
+                with open(os.path.join(HERE, "static", "index.html"), "rb") as f:
+                    return self._send(200, f.read(), "text/html")
+            if ROLE == "frontend" and u.path == "/check":
+                q = parse_qs(u.query)
+                ok, detail = probe(
+                    q.get("type", ["tcp"])[0],
+                    q.get("target", [""])[0],
+                    q.get("port", ["80"])[0],
+                    q.get("path", ["/"])[0],
+                )
+                return self._send(200, json.dumps({"ok": ok, "detail": detail}), "application/json")
+            # backend and database answer every GET, so a block is clearly the policy.
+            if ROLE in ("backend", "database"):
+                return self._send(200, f"{ROLE} {u.path}")
+            return self._send(404, "not found")
+
+        def log_message(self, *args):
+            pass
+
+
+    if __name__ == "__main__":
+        print(f"{ROLE} listening on :{PORT}", flush=True)
+        ThreadingHTTPServer(("", PORT), Handler).serve_forever()
+  index.html: |
+    <!doctype html>
+    <html lang="en">
+    <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Connectivity tester</title>
+    <style>
+      body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
+      h1 { font-size: 1.3rem; }
+      button { display: block; width: 100%; text-align: left; margin: .4rem 0; padding: .6rem .8rem;
+               border: 1px solid #ccc; border-radius: 6px; background: #fafafa; cursor: pointer; font-size: .95rem; }
+      button:hover { background: #f0f0f0; }
+      .r { font-family: ui-monospace, monospace; font-size: .85rem; padding: .2rem .5rem; border-radius: 4px; }
+      .ok { color: #0a7d32; } .no { color: #b00020; } .muted { color: #777; }
+    </style>
+    </head>
+    <body>
+    <h1>Connectivity tester</h1>
+    <p class="muted">Each button runs one probe from inside this pod. Green is reachable, red is blocked. Apply the policies in order and watch the results change.</p>
+    <div id="checks"></div>
+    <script>
+      const checks = [
+        { label: "DNS: resolve backend",            q: "type=dns&target=backend" },
+        { label: "TCP: backend:8081",               q: "type=tcp&target=backend&port=8081" },
+        { label: "HTTP GET backend:8081/api/health", q: "type=http&target=backend&port=8081&path=/api/health" },
+        { label: "HTTP GET backend:8081/private",    q: "type=http&target=backend&port=8081&path=/private" },
+        { label: "TCP: database:5432",              q: "type=tcp&target=database&port=5432" },
+        { label: "HTTPS: api.github.com",           q: "type=https&target=api.github.com&path=/" },
+      ];
+      const root = document.getElementById("checks");
+      for (const c of checks) {
+        const b = document.createElement("button");
+        const out = document.createElement("span");
+        out.className = "r muted"; out.textContent = "not run";
+        b.textContent = c.label;
+        b.onclick = async () => {
+          out.textContent = "running..."; out.className = "r muted";
+          try {
+            const res = await fetch("/check?" + c.q);
+            const j = await res.json();
+            out.textContent = (j.ok ? "OK  " : "BLOCKED  ") + j.detail;
+            out.className = "r " + (j.ok ? "ok" : "no");
+          } catch (e) {
+            out.textContent = "error " + e; out.className = "r no";
+          }
+        };
+        const row = document.createElement("div");
+        row.appendChild(b); row.appendChild(out);
+        root.appendChild(row);
+      }
+    </script>
+    </body>
+    </html>
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -21,12 +174,18 @@ spec:
     spec:
       containers:
         - name: app
-          image: connectivity-tester:latest
-          imagePullPolicy: IfNotPresent
+          image: python:3.12-slim
+          command: ["python", "/app/app.py"]
           env:
             - { name: ROLE, value: frontend }
             - { name: PORT, value: "8080" }
           ports: [{ containerPort: 8080 }]
+          volumeMounts:
+            - { name: src, mountPath: /app/app.py, subPath: app.py }
+            - { name: src, mountPath: /app/static/index.html, subPath: index.html }
+      volumes:
+        - name: src
+          configMap: { name: app-src }
 ---
 apiVersion: v1
 kind: Service
@@ -52,12 +211,18 @@ spec:
     spec:
       containers:
         - name: app
-          image: connectivity-tester:latest
-          imagePullPolicy: IfNotPresent
+          image: python:3.12-slim
+          command: ["python", "/app/app.py"]
           env:
             - { name: ROLE, value: backend }
             - { name: PORT, value: "8081" }
           ports: [{ containerPort: 8081 }]
+          volumeMounts:
+            - { name: src, mountPath: /app/app.py, subPath: app.py }
+            - { name: src, mountPath: /app/static/index.html, subPath: index.html }
+      volumes:
+        - name: src
+          configMap: { name: app-src }
 ---
 apiVersion: v1
 kind: Service
@@ -83,12 +248,18 @@ spec:
     spec:
       containers:
         - name: app
-          image: connectivity-tester:latest
-          imagePullPolicy: IfNotPresent
+          image: python:3.12-slim
+          command: ["python", "/app/app.py"]
           env:
             - { name: ROLE, value: database }
             - { name: PORT, value: "5432" }
           ports: [{ containerPort: 5432 }]
+          volumeMounts:
+            - { name: src, mountPath: /app/app.py, subPath: app.py }
+            - { name: src, mountPath: /app/static/index.html, subPath: index.html }
+      volumes:
+        - name: src
+          configMap: { name: app-src }
 ---
 apiVersion: v1
 kind: Service

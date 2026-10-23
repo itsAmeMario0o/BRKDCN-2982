@@ -29,7 +29,22 @@ cilium hubble enable --ui
 cilium status | grep -i hubble        # wait for Hubble: OK and hubble-ui: OK
 ```
 
-Install the Hubble CLI if you don't have it (one-time, on the node or your workstation):
+Install the Hubble CLI if you don't have it (one-time, on the control-plane
+node). The nodes have no `go`, so pick the architecture with `uname -m` rather
+than `go env`:
+
+```bash
+HUBBLE_ARCH=amd64; [ "$(uname -m)" = "aarch64" ] && HUBBLE_ARCH=arm64
+HUBBLE_VERSION=$(curl -s https://raw.githubusercontent.com/cilium/hubble/master/stable.txt)
+curl -L --fail --remote-name-all \
+  https://github.com/cilium/hubble/releases/download/${HUBBLE_VERSION}/hubble-linux-${HUBBLE_ARCH}.tar.gz{,.sha256sum}
+sha256sum --check hubble-linux-${HUBBLE_ARCH}.tar.gz.sha256sum
+sudo tar xzf hubble-linux-${HUBBLE_ARCH}.tar.gz -C /usr/local/bin
+rm hubble-linux-${HUBBLE_ARCH}.tar.gz{,.sha256sum}
+hubble version
+```
+
+Then point the CLI at the relay:
 
 ```bash
 cilium hubble port-forward &          # relay on localhost:4245
