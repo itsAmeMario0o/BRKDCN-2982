@@ -3,6 +3,8 @@
 Status: accepted
 Date: 2026-10-07
 
+Note (superseded in part, 2026-10-22): the cluster is now a kubeadm cluster with nodes k8s-cp and k8s-worker. References to a "kind" cluster below are historical; the GitOps decision itself still stands.
+
 ## Context
 
 The fabric-as-code for the BRKDCN-2982 lab (the NX-OS VXLAN EVPN underlay and

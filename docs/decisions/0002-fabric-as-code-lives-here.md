@@ -3,6 +3,8 @@
 Status: accepted
 Date: 2026-10-08
 
+Note (superseded in part, 2026-10-22): the cluster is now a kubeadm cluster with nodes k8s-cp and k8s-worker, and the committed fabric-as-code still describes the earlier pre-vPC single-homed topology. References to "kind" and the old addressing below are historical; a rewrite to the current vPC/routed topology is the next planned task. The decision on where the code lives still stands.
+
 ## Context
 
 ADR 0001 made this repo the source of truth for the GitOps pipeline. The rest of

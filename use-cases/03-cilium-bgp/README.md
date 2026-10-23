@@ -79,14 +79,14 @@ metadata:
 spec:
   nodeSelector:
     matchLabels:
-      kubernetes.io/hostname: <node>   # that node peers its own leaf
+      kubernetes.io/hostname: k8s-cp   # that node peers its own leaf
   bgpInstances:
     - name: "as65001"
       localASN: 65001
       peers:
         - name: leaf1
           peerASN: 65400            # the fabric's single AS
-          peerAddress: 10.2.1.1     # this node's upstream leaf
+          peerAddress: 10.0.50.1    # this node's upstream leaf
           peerConfigRef:
             name: peer-leaf
 ```

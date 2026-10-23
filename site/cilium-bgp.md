@@ -119,14 +119,14 @@ metadata:
 spec:
   nodeSelector:
     matchLabels:
-      kubernetes.io/hostname: <node>   # that node peers its own leaf
+      kubernetes.io/hostname: k8s-cp   # that node peers its own leaf
   bgpInstances:
     - name: "as65001"
       localASN: 65001
       peers:
         - name: leaf1
           peerASN: 65400            # the fabric's single AS
-          peerAddress: 10.2.1.1     # this node's upstream leaf
+          peerAddress: 10.0.50.1    # this node's upstream leaf
           peerConfigRef:
             name: peer-leaf
 ```
@@ -154,7 +154,7 @@ cilium bgp routes advertised ipv4 unicast     # the PodCIDRs leaving the cluster
 Fabric side, on a leaf:
 
 ```
-show bgp ipv4 unicast neighbors <node-ip>   # the cluster session, prefixes received
+show bgp vrf <tenant> ipv4 unicast neighbors <node-ip>   # the cluster session, prefixes received (the node peers in the tenant VRF, not default)
 show bgp l2vpn evpn                          # the pod prefix as a Type-5 route
 show nve peers                               # VTEP adjacency to the far leaf pair
 show ip route vrf <tenant>                   # the pod CIDR installed in the VRF

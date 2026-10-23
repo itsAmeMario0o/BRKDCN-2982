@@ -2,7 +2,7 @@
 
 A hands-on build of a single-AS (one autonomous system) NX-OS VXLAN (Virtual
 Extensible LAN) BGP (Border Gateway Protocol) EVPN (Ethernet VPN) fabric with a
-Kubernetes cluster (kind plus Cilium) peered into it over BGP, following the
+Kubernetes cluster (kubeadm + Cilium) peered into it over BGP, following the
 Cisco Live BRKDCN-2982 design. The lab is meant to be read and run on its own,
 as a takeaway that teaches the fabric, VXLAN, Cilium BGP, and the automation
 that builds them.
@@ -34,7 +34,7 @@ bridge. Each arrives as its own slice with its own spec.
 
 ## Bootstrap the GitOps pipeline
 
-From the kind host (outbound internet to GitHub and a container registry
+From a cluster node (outbound internet to GitHub and a container registry
 required):
 
 ```
