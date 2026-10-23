@@ -91,13 +91,13 @@ kubectl -n kube-system port-forward svc/hubble-ui 12000:80
 
 ## In Splunk
 
-The flows arrive under their own sourcetype, separate from the cluster logs, so a search targets them directly. A dashboard reads that sourcetype and shows three things: the verdict breakdown, FORWARDED against DROPPED; the verdicts over time; and the top talkers, the identities generating the most flows.
+The flows arrive under the sourcetype `kube:container:hubble`, the hubble-export container's stdout on the same OpenTelemetry log pipeline that carries the cluster logs, so a search targets them by that sourcetype. A dashboard reads that sourcetype and shows three things: the verdict breakdown, FORWARDED against DROPPED; the verdicts over time; and the top talkers, the identities generating the most flows.
 
 A verdict count is a one-line search:
 
 ```spl
-index=k8s sourcetype=cilium:hubble:flows
-| stats count by verdict
+index=k8s sourcetype="kube:container:hubble"
+| stats count by flow.verdict
 ```
 
 The flow records connect the policy to its evidence. When use case 1 applies a network policy that blocks `demo/frontend` from reaching `demo/database`, that blocked attempt appears here as a DROPPED flow between those two identities. The policy you wrote and the drop you can see are the same event, observed from the eBPF datapath that enforced it.
@@ -117,8 +117,8 @@ kubectl -n kube-system get pods -l k8s-app=hubble-relay
 kubectl -n kube-system get pods -l k8s-app=hubble-exporter
 
 # flows are arriving in Splunk, broken down by verdict
-#   index=k8s sourcetype=cilium:hubble:flows
-#   | stats count by verdict
+#   index=k8s sourcetype="kube:container:hubble"
+#   | stats count by flow.verdict
 
 # the live service map, through a port-forward
 kubectl -n kube-system port-forward svc/hubble-ui 12000:80
