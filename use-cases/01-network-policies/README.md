@@ -69,8 +69,19 @@ The policy YAML here is original to this repo.
 kubectl apply -f 00-demo-app.yaml
 kubectl -n demo rollout status deploy/frontend deploy/backend deploy/database
 
-# run curl from inside the frontend pod and print just the HTTP status
-fe() { kubectl exec -n demo deploy/frontend -- curl -s -o /dev/null -w "%{http_code}\n" --max-time 5 "$1"; }
+# Probe from inside the frontend pod and print just the HTTP status. The app
+# runs on python:3.12-slim, which has no curl, so use the Python standard
+# library; it prints the status code exactly like curl's %{http_code}.
+fe() { kubectl exec -n demo deploy/frontend -- python3 -c '
+import sys, socket, urllib.request, urllib.error
+socket.setdefaulttimeout(5)
+try:
+    print(urllib.request.urlopen(sys.argv[1]).status)
+except urllib.error.HTTPError as e:
+    print(e.code)
+except Exception:
+    print("000")
+' "$1"; }
 
 fe http://backend:8081/api/health        # baseline: 200
 

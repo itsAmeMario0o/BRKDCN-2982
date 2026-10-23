@@ -73,7 +73,17 @@ cilium bgp peers
 ## 6. Use case 1, network policy
 
 ```bash
-fe() { kubectl exec -n demo deploy/frontend -- curl -s -o /dev/null -w "%{http_code}\n" --max-time 5 "$1"; }
+# python:3.12-slim has no curl; probe with the Python stdlib, same status codes
+fe() { kubectl exec -n demo deploy/frontend -- python3 -c '
+import sys, socket, urllib.request, urllib.error
+socket.setdefaulttimeout(5)
+try:
+    print(urllib.request.urlopen(sys.argv[1]).status)
+except urllib.error.HTTPError as e:
+    print(e.code)
+except Exception:
+    print("000")
+' "$1"; }
 
 fe http://backend:8081/api/health                      # 200 baseline
 kubectl apply -f use-cases/01-network-policies/01-default-deny.yaml

@@ -78,10 +78,19 @@ kubectl apply -f 00-demo-app.yaml
 kubectl -n demo rollout status deploy/backend deploy/frontend deploy/database
 ```
 
-Each policy changes what the frontend can reach. Apply them one at a time and watch the HTTP status code change. This helper runs curl inside the frontend pod and prints the status code it gets back:
+Each policy changes what the frontend can reach. Apply them one at a time and watch the HTTP status code change. The app runs on `python:3.12-slim`, which has no curl, so this helper probes from inside the frontend pod with the Python standard library and prints the status code, just as curl would:
 
 ```bash
-fe() { kubectl exec -n demo deploy/frontend -- curl -s -o /dev/null -w "%{http_code}\n" --max-time 5 "$1"; }
+fe() { kubectl exec -n demo deploy/frontend -- python3 -c '
+import sys, socket, urllib.request, urllib.error
+socket.setdefaulttimeout(5)
+try:
+    print(urllib.request.urlopen(sys.argv[1]).status)
+except urllib.error.HTTPError as e:
+    print(e.code)
+except Exception:
+    print("000")
+' "$1"; }
 
 fe http://backend:8081/api/health        # baseline: 200
 
