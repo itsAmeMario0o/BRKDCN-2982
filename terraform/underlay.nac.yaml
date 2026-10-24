@@ -219,6 +219,7 @@ nxos:
       feature:
         bgp: true
         pim: true
+        vpc: true
       interfaces:
         loopbacks:
         - id: 0
@@ -252,6 +253,21 @@ nxos:
           pim:
             sparse_mode: true
           mtu: 9216
+        - id: 1/3
+          channel_group: 500
+          channel_group_mode: active
+        - id: 1/4
+          channel_group: 10
+        port_channels:
+        - id: 500
+          switchport:
+            mode: trunk
+            trunk_allowed_vlans: 50,100,200,2001
+        - id: 10
+          vpc_id: 10
+          switchport:
+            mode: access
+            access_vlan: 50
       routing:
         bgp:
           asn: '65400'
@@ -278,11 +294,24 @@ nxos:
           - address: 10.254.254.254
             group_lists:
             - group_list: 239.0.0.0/8
+      vpc:
+        domain_id: 1
+        peer_switch: true
+        peer_gateway: true
+        auto_recovery: true
+        auto_recovery_reload_delay: 360
+        delay_restore: 150
+        peer_link_port_channel: 500
+        keepalive:
+          destination_ip: 192.168.255.52
+          source_ip: 192.168.255.51
+          vrf: management
   - name: leaf2
     configuration:
       feature:
         bgp: true
         pim: true
+        vpc: true
       interfaces:
         loopbacks:
         - id: 0
@@ -316,6 +345,21 @@ nxos:
           pim:
             sparse_mode: true
           mtu: 9216
+        - id: 1/3
+          channel_group: 500
+          channel_group_mode: active
+        - id: 1/4
+          channel_group: 10
+        port_channels:
+        - id: 500
+          switchport:
+            mode: trunk
+            trunk_allowed_vlans: 50,100,200,2001
+        - id: 10
+          vpc_id: 10
+          switchport:
+            mode: access
+            access_vlan: 50
       routing:
         bgp:
           asn: '65400'
@@ -342,11 +386,24 @@ nxos:
           - address: 10.254.254.254
             group_lists:
             - group_list: 239.0.0.0/8
+      vpc:
+        domain_id: 1
+        peer_switch: true
+        peer_gateway: true
+        auto_recovery: true
+        auto_recovery_reload_delay: 360
+        delay_restore: 150
+        peer_link_port_channel: 500
+        keepalive:
+          destination_ip: 192.168.255.51
+          source_ip: 192.168.255.52
+          vrf: management
   - name: leaf3
     configuration:
       feature:
         bgp: true
         pim: true
+        vpc: true
       interfaces:
         loopbacks:
         - id: 0
@@ -380,6 +437,21 @@ nxos:
           pim:
             sparse_mode: true
           mtu: 9216
+        - id: 1/3
+          channel_group: 500
+          channel_group_mode: active
+        - id: 1/4
+          channel_group: 10
+        port_channels:
+        - id: 500
+          switchport:
+            mode: trunk
+            trunk_allowed_vlans: 51,100,200,2001
+        - id: 10
+          vpc_id: 10
+          switchport:
+            mode: access
+            access_vlan: 51
       routing:
         bgp:
           asn: '65400'
@@ -406,11 +478,24 @@ nxos:
           - address: 10.254.254.254
             group_lists:
             - group_list: 239.0.0.0/8
+      vpc:
+        domain_id: 2
+        peer_switch: true
+        peer_gateway: true
+        auto_recovery: true
+        auto_recovery_reload_delay: 360
+        delay_restore: 150
+        peer_link_port_channel: 500
+        keepalive:
+          destination_ip: 192.168.255.54
+          source_ip: 192.168.255.53
+          vrf: management
   - name: leaf4
     configuration:
       feature:
         bgp: true
         pim: true
+        vpc: true
       interfaces:
         loopbacks:
         - id: 0
@@ -444,6 +529,21 @@ nxos:
           pim:
             sparse_mode: true
           mtu: 9216
+        - id: 1/3
+          channel_group: 500
+          channel_group_mode: active
+        - id: 1/4
+          channel_group: 10
+        port_channels:
+        - id: 500
+          switchport:
+            mode: trunk
+            trunk_allowed_vlans: 51,100,200,2001
+        - id: 10
+          vpc_id: 10
+          switchport:
+            mode: access
+            access_vlan: 51
       routing:
         bgp:
           asn: '65400'
@@ -470,3 +570,15 @@ nxos:
           - address: 10.254.254.254
             group_lists:
             - group_list: 239.0.0.0/8
+      vpc:
+        domain_id: 2
+        peer_switch: true
+        peer_gateway: true
+        auto_recovery: true
+        auto_recovery_reload_delay: 360
+        delay_restore: 150
+        peer_link_port_channel: 500
+        keepalive:
+          destination_ip: 192.168.255.53
+          source_ip: 192.168.255.54
+          vrf: management
