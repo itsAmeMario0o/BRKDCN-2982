@@ -799,6 +799,14 @@ nxos:
           channel_group_mode: active
         - id: 1/4
           channel_group: 10
+          # Eth1/5: routed link to the border firewall, in the tenant VRF
+        - id: 1/5
+          shutdown: false
+          switchport:
+            enabled: false
+          vrf: tenant1
+          ip:
+            address: 10.2.3.1/30
         port_channels:
         - id: 500
           switchport:
@@ -899,6 +907,12 @@ nxos:
             - ip: 10.0.51.10
               remote_as: '65001'
               description: cilium-node
+              address_families:
+              - address_family: ipv4-unicast
+            # the border firewall (ASA), eBGP into the tenant VRF
+            - ip: 10.2.3.2
+              remote_as: '65500'
+              description: asav-border
               address_families:
               - address_family: ipv4-unicast
         pim:
@@ -1012,6 +1026,14 @@ nxos:
           channel_group_mode: active
         - id: 1/4
           channel_group: 10
+          # Eth1/5: routed link to the border firewall, in the tenant VRF
+        - id: 1/5
+          shutdown: false
+          switchport:
+            enabled: false
+          vrf: tenant1
+          ip:
+            address: 10.2.4.1/30
         port_channels:
         - id: 500
           switchport:
@@ -1112,6 +1134,12 @@ nxos:
             - ip: 10.0.51.10
               remote_as: '65001'
               description: cilium-node
+              address_families:
+              - address_family: ipv4-unicast
+            # the border firewall (ASA), eBGP into the tenant VRF
+            - ip: 10.2.4.2
+              remote_as: '65500'
+              description: asav-border
               address_families:
               - address_family: ipv4-unicast
         pim:
