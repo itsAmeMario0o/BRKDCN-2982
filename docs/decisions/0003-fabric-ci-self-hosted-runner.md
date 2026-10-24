@@ -3,6 +3,8 @@
 Status: accepted
 Date: 2026-10-08
 
+Note (superseded in part, 2026-10-23): the EVPN overlay is now in Terraform, not Ansible, so the runner applies Terraform and pyATS only. The references below to an Ansible overlay are historical; the runner design otherwise stands.
+
 ## Context
 
 ADR 0001 put the cluster's continuous delivery on Argo CD, which pulls

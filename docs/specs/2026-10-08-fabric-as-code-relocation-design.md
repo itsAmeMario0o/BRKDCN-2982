@@ -1,5 +1,7 @@
 # Fabric-as-code relocation - design
 
+Note (superseded in part, 2026-10-23): the overlay named below is now in Terraform, not Ansible, and the Ansible overlay has been retired. The relocation itself (the fabric-as-code living in this repo) stands.
+
 Goal: move the fabric-as-code (Terraform underlay, Ansible overlay, Cilium BGP
 config) from the operational substrate repo into this repo, behind a small
 substrate seam, so this repo is the complete, portable, teachable fabric build.

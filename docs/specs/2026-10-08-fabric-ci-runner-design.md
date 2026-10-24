@@ -1,5 +1,7 @@
 # Fabric CI/CD runner - design
 
+Note (superseded in part, 2026-10-23): the overlay is now in Terraform, not Ansible, so the runner applies Terraform and pyATS only. The runner design otherwise stands.
+
 Goal: a self-hosted GitHub Actions runner that, when the fabric-as-code changes
 on `main`, applies the Terraform underlay and the Ansible overlay to the live
 switches and verifies the result with pyATS. This is the fabric lane; Argo CD
