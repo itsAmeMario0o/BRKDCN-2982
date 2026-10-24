@@ -1,0 +1,19 @@
+---
+# The border firewall, reached over SSH. In the lab the firewall's management
+# address sits on an out-of-band network, so you forward a local port to it
+# through the lab host and point ansible_host at the forward (see README).
+# The password comes from the environment, never from this file.
+firewalls:
+  hosts:
+    firewall:
+      ansible_host: 127.0.0.1
+      ansible_port: 2222
+  vars:
+    ansible_user: ansible
+    ansible_password: "{{ lookup('env', 'ASA_PASSWORD') }}"
+    ansible_connection: ansible.netcommon.network_cli
+    ansible_network_os: cisco.asa.asa
+    ansible_ssh_common_args: >-
+      -o StrictHostKeyChecking=no
+      -o UserKnownHostsFile=/dev/null
+      -o HostKeyAlgorithms=+ssh-ed25519

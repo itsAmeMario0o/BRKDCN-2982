@@ -1,0 +1,72 @@
+---
+# Border firewall: the fabric-facing config the Terraform fabric cannot reach.
+# The firewall is a different platform with no Terraform provider, so its config
+# lives here. The leaf side of this seam (the eBGP to AS 65500 and the two /30
+# links) is in ../terraform; this is the firewall's own side.
+#
+# Not here, on purpose: the firewall's management plane (a login user, aaa, ssh,
+# and the host keys). Ansible cannot log into a device it cannot SSH to, so that
+# bootstrap must come up in the firewall's day-0 config on a fresh build. See
+# README. This playbook owns only the data-plane border config below.
+- name: Border firewall config
+  hosts: firewall
+  gather_facts: false
+  tasks:
+    - name: Link to the first leaf pair
+      cisco.asa.asa_config:
+        parents: interface GigabitEthernet0/0
+        lines:
+          - nameif inside3
+          - security-level 100
+          - ip address 10.2.3.2 255.255.255.252
+
+    - name: Link to the second leaf pair
+      cisco.asa.asa_config:
+        parents: interface GigabitEthernet0/1
+        lines:
+          - nameif inside4
+          - security-level 100
+          - ip address 10.2.4.2 255.255.255.252
+
+    - name: Egress interface (DHCP from the lab out-of-band network)
+      cisco.asa.asa_config:
+        parents: interface GigabitEthernet0/2
+        lines:
+          - nameif outside
+          - security-level 0
+          - ip address dhcp setroute
+
+    - name: Tenant object and the egress source NAT
+      cisco.asa.asa_config:
+        parents: object network TENANT
+        lines:
+          - subnet 10.0.0.0 255.0.0.0
+          - nat (any,outside) dynamic interface
+
+    - name: Permit-any ACL, applied globally (open lab posture)
+      cisco.asa.asa_config:
+        lines:
+          - access-list ALLOW extended permit ip any any
+          - access-group ALLOW global
+
+    - name: BGP process
+      cisco.asa.asa_config:
+        parents: router bgp 65500
+        lines:
+          - bgp log-neighbor-changes
+          - bgp router-id 10.2.3.2
+
+    - name: BGP neighbors, one per leaf pair, into the fabric AS 65400
+      cisco.asa.asa_config:
+        parents:
+          - router bgp 65500
+          - address-family ipv4 unicast
+        lines:
+          - neighbor 10.2.3.1 remote-as 65400
+          - neighbor 10.2.3.1 activate
+          - neighbor 10.2.3.1 default-originate
+          - neighbor 10.2.4.1 remote-as 65400
+          - neighbor 10.2.4.1 activate
+          - neighbor 10.2.4.1 default-originate
+          - no auto-summary
+          - no synchronization

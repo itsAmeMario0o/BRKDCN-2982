@@ -1,0 +1,28 @@
+! Border firewall day-0 bootstrap: the management plane Ansible needs to log in.
+!
+! Ansible drives the firewall over SSH, and it cannot create its own way in. So
+! these lines have to be present before the playbook runs. On a rebuilt lab, put
+! them in the firewall node's day-0 config so a fresh device comes up reachable.
+! The playbook (firewall.yml) owns everything else.
+!
+! Replace the password with your own. It must satisfy the firewall's password
+! policy: no run of three repeated or sequential characters. Store the value you
+! choose as ASA_ANSIBLE_PASSWORD (see the lab's labs.env), which is what the
+! playbook reads.
+
+username ansible password <set-a-policy-compliant-password> privilege 15
+aaa authentication ssh console LOCAL
+aaa authorization exec LOCAL auto-enable
+
+ssh 192.168.255.0 255.255.255.0 outside
+ssh version 2
+
+! Host keys (config mode on 9.24). SSH will not come up without them.
+crypto key generate rsa modulus 2048
+crypto key generate eddsa edwards-curve ed25519
+
+! One wrinkle: when the firewall's password policy is on, a user an admin
+! creates must change its password at first login. That interactive prompt will
+! hang Ansible. Either clear it once by logging in by hand and setting the new
+! password (then store that), or pre-empt it in day-0. The eddsa host key lets a
+! modern SSH client connect without enabling legacy host-key algorithms.
