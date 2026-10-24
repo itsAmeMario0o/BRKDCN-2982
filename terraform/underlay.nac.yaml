@@ -15,6 +15,8 @@ nxos:
       feature:
         bgp: true
         pim: true
+        nv_overlay: true
+        evpn: true
       interfaces:
         loopbacks:
         - id: 0
@@ -77,6 +79,8 @@ nxos:
             - prefix: 10.1.1.4/31
             - prefix: 10.1.1.6/31
             - prefix: 10.254.254.254/32
+          - address_family: l2vpn-evpn
+            retain_route_target_all: true
           neighbors:
           - ip: 10.1.1.1
             remote_as: '65400'
@@ -102,6 +106,46 @@ nxos:
             address_families:
             - address_family: ipv4-unicast
               route_reflector_client: true
+          - ip: 10.0.0.11
+            remote_as: '65400'
+            description: leaf1-evpn
+            update_source_interface_type: loopback
+            update_source_interface_id: 0
+            address_families:
+            - address_family: l2vpn-evpn
+              send_community_standard: true
+              send_community_extended: true
+              route_reflector_client: true
+          - ip: 10.0.0.12
+            remote_as: '65400'
+            description: leaf2-evpn
+            update_source_interface_type: loopback
+            update_source_interface_id: 0
+            address_families:
+            - address_family: l2vpn-evpn
+              send_community_standard: true
+              send_community_extended: true
+              route_reflector_client: true
+          - ip: 10.0.0.13
+            remote_as: '65400'
+            description: leaf3-evpn
+            update_source_interface_type: loopback
+            update_source_interface_id: 0
+            address_families:
+            - address_family: l2vpn-evpn
+              send_community_standard: true
+              send_community_extended: true
+              route_reflector_client: true
+          - ip: 10.0.0.14
+            remote_as: '65400'
+            description: leaf4-evpn
+            update_source_interface_type: loopback
+            update_source_interface_id: 0
+            address_families:
+            - address_family: l2vpn-evpn
+              send_community_standard: true
+              send_community_extended: true
+              route_reflector_client: true
         pim:
           rps:
           - address: 10.254.254.254
@@ -117,6 +161,8 @@ nxos:
       feature:
         bgp: true
         pim: true
+        nv_overlay: true
+        evpn: true
       interfaces:
         loopbacks:
         - id: 0
@@ -179,6 +225,8 @@ nxos:
             - prefix: 10.1.2.4/31
             - prefix: 10.1.2.6/31
             - prefix: 10.254.254.254/32
+          - address_family: l2vpn-evpn
+            retain_route_target_all: true
           neighbors:
           - ip: 10.1.2.1
             remote_as: '65400'
@@ -204,6 +252,46 @@ nxos:
             address_families:
             - address_family: ipv4-unicast
               route_reflector_client: true
+          - ip: 10.0.0.11
+            remote_as: '65400'
+            description: leaf1-evpn
+            update_source_interface_type: loopback
+            update_source_interface_id: 0
+            address_families:
+            - address_family: l2vpn-evpn
+              send_community_standard: true
+              send_community_extended: true
+              route_reflector_client: true
+          - ip: 10.0.0.12
+            remote_as: '65400'
+            description: leaf2-evpn
+            update_source_interface_type: loopback
+            update_source_interface_id: 0
+            address_families:
+            - address_family: l2vpn-evpn
+              send_community_standard: true
+              send_community_extended: true
+              route_reflector_client: true
+          - ip: 10.0.0.13
+            remote_as: '65400'
+            description: leaf3-evpn
+            update_source_interface_type: loopback
+            update_source_interface_id: 0
+            address_families:
+            - address_family: l2vpn-evpn
+              send_community_standard: true
+              send_community_extended: true
+              route_reflector_client: true
+          - ip: 10.0.0.14
+            remote_as: '65400'
+            description: leaf4-evpn
+            update_source_interface_type: loopback
+            update_source_interface_id: 0
+            address_families:
+            - address_family: l2vpn-evpn
+              send_community_standard: true
+              send_community_extended: true
+              route_reflector_client: true
         pim:
           rps:
           - address: 10.254.254.254
@@ -220,6 +308,10 @@ nxos:
         bgp: true
         pim: true
         vpc: true
+        nv_overlay: true
+        vn_segment_vlan_based: true
+        interface_vlan: true
+        evpn: true
       interfaces:
         loopbacks:
         - id: 0
@@ -268,6 +360,40 @@ nxos:
           switchport:
             mode: access
             access_vlan: 50
+        nve:
+          source_interface_type: loopback
+          source_interface_id: 1
+          host_reachability_protocol: bgp
+          advertise_virtual_rmac: true
+          vnis:
+          - vni: 10050
+            mcast_group: 239.1.1.50
+          - vni: 10100
+            mcast_group: 239.1.1.100
+          - vni: 10200
+            mcast_group: 239.1.1.200
+          - vni: 50000
+            associate_vrf: true
+        vlans:
+        - id: 50
+          vrf: tenant1
+          ip:
+            address: 10.0.50.1/24
+          fabric_forwarding_mode: anycast-gw
+        - id: 100
+          vrf: tenant1
+          ip:
+            address: 10.0.100.1/24
+          fabric_forwarding_mode: anycast-gw
+        - id: 200
+          vrf: tenant1
+          ip:
+            address: 10.0.200.1/24
+          fabric_forwarding_mode: anycast-gw
+        - id: 2001
+          vrf: tenant1
+          ip:
+            forward: true
       routing:
         bgp:
           asn: '65400'
@@ -278,6 +404,7 @@ nxos:
             - prefix: 10.0.0.11/32
             - prefix: 10.0.1.11/32
             - prefix: 10.0.1.100/32
+          - address_family: l2vpn-evpn
           neighbors:
           - ip: 10.1.1.0
             remote_as: '65400'
@@ -289,6 +416,24 @@ nxos:
             description: spine2
             address_families:
             - address_family: ipv4-unicast
+          - ip: 10.0.0.1
+            remote_as: '65400'
+            description: spine1-evpn
+            update_source_interface_type: loopback
+            update_source_interface_id: 0
+            address_families:
+            - address_family: l2vpn-evpn
+              send_community_standard: true
+              send_community_extended: true
+          - ip: 10.0.0.2
+            remote_as: '65400'
+            description: spine2-evpn
+            update_source_interface_type: loopback
+            update_source_interface_id: 0
+            address_families:
+            - address_family: l2vpn-evpn
+              send_community_standard: true
+              send_community_extended: true
         pim:
           rps:
           - address: 10.254.254.254
@@ -306,12 +451,47 @@ nxos:
           destination_ip: 192.168.255.52
           source_ip: 192.168.255.51
           vrf: management
+      fabric_forwarding:
+        anycast_gateway_mac: "00:00:00:00:12:34"
+      vlan:
+        vlans:
+        - id: 50
+          vn_segment: 10050
+        - id: 100
+          vn_segment: 10100
+        - id: 200
+          vn_segment: 10200
+        - id: 2001
+          vn_segment: 50000
+      vrfs:
+      - name: tenant1
+        vni: 50000
+        route_distinguisher: auto
+        address_families:
+        - address_family: ipv4-unicast
+          route_target_both_auto: true
+          route_target_both_auto_evpn: true
+      evpn:
+        vnis:
+        - vni: 10050
+          rd: auto
+          route_target_both_auto: true
+        - vni: 10100
+          rd: auto
+          route_target_both_auto: true
+        - vni: 10200
+          rd: auto
+          route_target_both_auto: true
   - name: leaf2
     configuration:
       feature:
         bgp: true
         pim: true
         vpc: true
+        nv_overlay: true
+        vn_segment_vlan_based: true
+        interface_vlan: true
+        evpn: true
       interfaces:
         loopbacks:
         - id: 0
@@ -360,6 +540,40 @@ nxos:
           switchport:
             mode: access
             access_vlan: 50
+        nve:
+          source_interface_type: loopback
+          source_interface_id: 1
+          host_reachability_protocol: bgp
+          advertise_virtual_rmac: true
+          vnis:
+          - vni: 10050
+            mcast_group: 239.1.1.50
+          - vni: 10100
+            mcast_group: 239.1.1.100
+          - vni: 10200
+            mcast_group: 239.1.1.200
+          - vni: 50000
+            associate_vrf: true
+        vlans:
+        - id: 50
+          vrf: tenant1
+          ip:
+            address: 10.0.50.1/24
+          fabric_forwarding_mode: anycast-gw
+        - id: 100
+          vrf: tenant1
+          ip:
+            address: 10.0.100.1/24
+          fabric_forwarding_mode: anycast-gw
+        - id: 200
+          vrf: tenant1
+          ip:
+            address: 10.0.200.1/24
+          fabric_forwarding_mode: anycast-gw
+        - id: 2001
+          vrf: tenant1
+          ip:
+            forward: true
       routing:
         bgp:
           asn: '65400'
@@ -370,6 +584,7 @@ nxos:
             - prefix: 10.0.0.12/32
             - prefix: 10.0.1.12/32
             - prefix: 10.0.1.100/32
+          - address_family: l2vpn-evpn
           neighbors:
           - ip: 10.1.1.2
             remote_as: '65400'
@@ -381,6 +596,24 @@ nxos:
             description: spine2
             address_families:
             - address_family: ipv4-unicast
+          - ip: 10.0.0.1
+            remote_as: '65400'
+            description: spine1-evpn
+            update_source_interface_type: loopback
+            update_source_interface_id: 0
+            address_families:
+            - address_family: l2vpn-evpn
+              send_community_standard: true
+              send_community_extended: true
+          - ip: 10.0.0.2
+            remote_as: '65400'
+            description: spine2-evpn
+            update_source_interface_type: loopback
+            update_source_interface_id: 0
+            address_families:
+            - address_family: l2vpn-evpn
+              send_community_standard: true
+              send_community_extended: true
         pim:
           rps:
           - address: 10.254.254.254
@@ -398,12 +631,47 @@ nxos:
           destination_ip: 192.168.255.51
           source_ip: 192.168.255.52
           vrf: management
+      fabric_forwarding:
+        anycast_gateway_mac: "00:00:00:00:12:34"
+      vlan:
+        vlans:
+        - id: 50
+          vn_segment: 10050
+        - id: 100
+          vn_segment: 10100
+        - id: 200
+          vn_segment: 10200
+        - id: 2001
+          vn_segment: 50000
+      vrfs:
+      - name: tenant1
+        vni: 50000
+        route_distinguisher: auto
+        address_families:
+        - address_family: ipv4-unicast
+          route_target_both_auto: true
+          route_target_both_auto_evpn: true
+      evpn:
+        vnis:
+        - vni: 10050
+          rd: auto
+          route_target_both_auto: true
+        - vni: 10100
+          rd: auto
+          route_target_both_auto: true
+        - vni: 10200
+          rd: auto
+          route_target_both_auto: true
   - name: leaf3
     configuration:
       feature:
         bgp: true
         pim: true
         vpc: true
+        nv_overlay: true
+        vn_segment_vlan_based: true
+        interface_vlan: true
+        evpn: true
       interfaces:
         loopbacks:
         - id: 0
@@ -452,6 +720,40 @@ nxos:
           switchport:
             mode: access
             access_vlan: 51
+        nve:
+          source_interface_type: loopback
+          source_interface_id: 1
+          host_reachability_protocol: bgp
+          advertise_virtual_rmac: true
+          vnis:
+          - vni: 10051
+            mcast_group: 239.1.1.51
+          - vni: 10100
+            mcast_group: 239.1.1.100
+          - vni: 10200
+            mcast_group: 239.1.1.200
+          - vni: 50000
+            associate_vrf: true
+        vlans:
+        - id: 51
+          vrf: tenant1
+          ip:
+            address: 10.0.51.1/24
+          fabric_forwarding_mode: anycast-gw
+        - id: 100
+          vrf: tenant1
+          ip:
+            address: 10.0.100.1/24
+          fabric_forwarding_mode: anycast-gw
+        - id: 200
+          vrf: tenant1
+          ip:
+            address: 10.0.200.1/24
+          fabric_forwarding_mode: anycast-gw
+        - id: 2001
+          vrf: tenant1
+          ip:
+            forward: true
       routing:
         bgp:
           asn: '65400'
@@ -462,6 +764,7 @@ nxos:
             - prefix: 10.0.0.13/32
             - prefix: 10.0.1.13/32
             - prefix: 10.0.1.101/32
+          - address_family: l2vpn-evpn
           neighbors:
           - ip: 10.1.1.4
             remote_as: '65400'
@@ -473,6 +776,24 @@ nxos:
             description: spine2
             address_families:
             - address_family: ipv4-unicast
+          - ip: 10.0.0.1
+            remote_as: '65400'
+            description: spine1-evpn
+            update_source_interface_type: loopback
+            update_source_interface_id: 0
+            address_families:
+            - address_family: l2vpn-evpn
+              send_community_standard: true
+              send_community_extended: true
+          - ip: 10.0.0.2
+            remote_as: '65400'
+            description: spine2-evpn
+            update_source_interface_type: loopback
+            update_source_interface_id: 0
+            address_families:
+            - address_family: l2vpn-evpn
+              send_community_standard: true
+              send_community_extended: true
         pim:
           rps:
           - address: 10.254.254.254
@@ -490,12 +811,47 @@ nxos:
           destination_ip: 192.168.255.54
           source_ip: 192.168.255.53
           vrf: management
+      fabric_forwarding:
+        anycast_gateway_mac: "00:00:00:00:12:34"
+      vlan:
+        vlans:
+        - id: 51
+          vn_segment: 10051
+        - id: 100
+          vn_segment: 10100
+        - id: 200
+          vn_segment: 10200
+        - id: 2001
+          vn_segment: 50000
+      vrfs:
+      - name: tenant1
+        vni: 50000
+        route_distinguisher: auto
+        address_families:
+        - address_family: ipv4-unicast
+          route_target_both_auto: true
+          route_target_both_auto_evpn: true
+      evpn:
+        vnis:
+        - vni: 10051
+          rd: auto
+          route_target_both_auto: true
+        - vni: 10100
+          rd: auto
+          route_target_both_auto: true
+        - vni: 10200
+          rd: auto
+          route_target_both_auto: true
   - name: leaf4
     configuration:
       feature:
         bgp: true
         pim: true
         vpc: true
+        nv_overlay: true
+        vn_segment_vlan_based: true
+        interface_vlan: true
+        evpn: true
       interfaces:
         loopbacks:
         - id: 0
@@ -544,6 +900,40 @@ nxos:
           switchport:
             mode: access
             access_vlan: 51
+        nve:
+          source_interface_type: loopback
+          source_interface_id: 1
+          host_reachability_protocol: bgp
+          advertise_virtual_rmac: true
+          vnis:
+          - vni: 10051
+            mcast_group: 239.1.1.51
+          - vni: 10100
+            mcast_group: 239.1.1.100
+          - vni: 10200
+            mcast_group: 239.1.1.200
+          - vni: 50000
+            associate_vrf: true
+        vlans:
+        - id: 51
+          vrf: tenant1
+          ip:
+            address: 10.0.51.1/24
+          fabric_forwarding_mode: anycast-gw
+        - id: 100
+          vrf: tenant1
+          ip:
+            address: 10.0.100.1/24
+          fabric_forwarding_mode: anycast-gw
+        - id: 200
+          vrf: tenant1
+          ip:
+            address: 10.0.200.1/24
+          fabric_forwarding_mode: anycast-gw
+        - id: 2001
+          vrf: tenant1
+          ip:
+            forward: true
       routing:
         bgp:
           asn: '65400'
@@ -554,6 +944,7 @@ nxos:
             - prefix: 10.0.0.14/32
             - prefix: 10.0.1.14/32
             - prefix: 10.0.1.101/32
+          - address_family: l2vpn-evpn
           neighbors:
           - ip: 10.1.1.6
             remote_as: '65400'
@@ -565,6 +956,24 @@ nxos:
             description: spine2
             address_families:
             - address_family: ipv4-unicast
+          - ip: 10.0.0.1
+            remote_as: '65400'
+            description: spine1-evpn
+            update_source_interface_type: loopback
+            update_source_interface_id: 0
+            address_families:
+            - address_family: l2vpn-evpn
+              send_community_standard: true
+              send_community_extended: true
+          - ip: 10.0.0.2
+            remote_as: '65400'
+            description: spine2-evpn
+            update_source_interface_type: loopback
+            update_source_interface_id: 0
+            address_families:
+            - address_family: l2vpn-evpn
+              send_community_standard: true
+              send_community_extended: true
         pim:
           rps:
           - address: 10.254.254.254
@@ -582,3 +991,34 @@ nxos:
           destination_ip: 192.168.255.53
           source_ip: 192.168.255.54
           vrf: management
+      fabric_forwarding:
+        anycast_gateway_mac: "00:00:00:00:12:34"
+      vlan:
+        vlans:
+        - id: 51
+          vn_segment: 10051
+        - id: 100
+          vn_segment: 10100
+        - id: 200
+          vn_segment: 10200
+        - id: 2001
+          vn_segment: 50000
+      vrfs:
+      - name: tenant1
+        vni: 50000
+        route_distinguisher: auto
+        address_families:
+        - address_family: ipv4-unicast
+          route_target_both_auto: true
+          route_target_both_auto_evpn: true
+      evpn:
+        vnis:
+        - vni: 10051
+          rd: auto
+          route_target_both_auto: true
+        - vni: 10100
+          rd: auto
+          route_target_both_auto: true
+        - vni: 10200
+          rd: auto
+          route_target_both_auto: true
