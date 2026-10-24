@@ -909,10 +909,10 @@ nxos:
               description: cilium-node
               address_families:
               - address_family: ipv4-unicast
-            # the border firewall (ASA), eBGP into the tenant VRF
+            # the border firewall, eBGP into the tenant VRF
             - ip: 10.2.3.2
               remote_as: '65500'
-              description: asav-border
+              description: firewall
               address_families:
               - address_family: ipv4-unicast
         pim:
@@ -1136,10 +1136,10 @@ nxos:
               description: cilium-node
               address_families:
               - address_family: ipv4-unicast
-            # the border firewall (ASA), eBGP into the tenant VRF
+            # the border firewall, eBGP into the tenant VRF
             - ip: 10.2.4.2
               remote_as: '65500'
-              description: asav-border
+              description: firewall
               address_families:
               - address_family: ipv4-unicast
         pim:
