@@ -29,7 +29,7 @@ The fabric is four leaves and two spines, all in one BGP autonomous system (6540
 
 Beside the fabric sits a Kubernetes cluster running Cilium as its CNI (Container Network Interface), with kube-proxy replaced and the BGP control plane turned on. The cluster is its own autonomous system (65001). Each node peers eBGP with the leaf that it attaches to, advertises its pod CIDR, and the leaf re-originates that prefix as an EVPN Type-5 route. The spines then reflect the route, and every tunnel endpoint can reach the pod across VXLAN.
 
-Everything here is code: a Terraform data model for the underlay, an Ansible data model for the overlay, Cilium CRDs (custom resource definitions) for the peering, and a GitOps and CI (continuous integration) pipeline that keeps everything applied.
+Everything here is code: a Terraform data model for the underlay and overlay, Cilium CRDs (custom resource definitions) for the peering, and a GitOps and CI (continuous integration) pipeline that keeps everything applied.
 
 ## The prefix's path
 
@@ -68,7 +68,7 @@ The leaf is the seam: BGP IPv4 unicast faces the cluster, and `l2vpn evpn` faces
     <a class="card card-interactive" href="{{ '/overlay/' | relative_url }}">
       <span class="card-kicker">03 · Build</span>
       <span class="card-title">The overlay and vPC</span>
-      <p>Ansible lays the l2vpn evpn overlay, the tenant VRF (virtual routing and forwarding), anycast gateways, and the vPC leaf pair, device-direct.</p>
+      <p>Terraform lays the l2vpn evpn overlay, the tenant VRF (virtual routing and forwarding), anycast gateways, and the vPC leaf pair, device-direct.</p>
     </a>
   </li>
   <li>
@@ -100,5 +100,5 @@ This repository is the portable source of truth for the fabric-as-code and its p
 
 <div class="callout">
 <strong>What you need to run the lab for real.</strong>
-You need six Nexus switches reachable over NX-API (NX-OS API), a Kubernetes cluster running Cilium with the BGP control plane enabled, and <code>kubectl</code>, the <code>cilium</code> CLI (command-line interface), Terraform, and Ansible on your path. Use cases 1 and 2 run on any Cilium cluster; use case 3 requires the fabric underneath. See <a href="{{ '/underlay/' | relative_url }}">the underlay page</a> to begin.
+You need six Nexus switches reachable over NX-API (NX-OS API), a Kubernetes cluster running Cilium with the BGP control plane enabled, and <code>kubectl</code>, the <code>cilium</code> CLI (command-line interface), and Terraform on your path. Use cases 1 and 2 run on any Cilium cluster; use case 3 requires the fabric underneath. See <a href="{{ '/underlay/' | relative_url }}">the underlay page</a> to begin.
 </div>

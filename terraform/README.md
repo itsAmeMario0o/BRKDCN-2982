@@ -1,10 +1,10 @@
-# VXLAN EVPN underlay as code
+# VXLAN EVPN fabric as code
 
-The NX-OS single-AS VXLAN BGP EVPN underlay, built from a netascode `nac-nxos`
-data model. Terraform owns bring-up and the BGP underlay (features, loopbacks,
-the point-to-point links, and the iBGP sessions that carry loopback
-reachability). The `l2vpn evpn` overlay and VXLAN are the Ansible leg
-(`../ansible`); the Cilium BGP peering is `../cilium/bgp.yaml`.
+The NX-OS single-AS VXLAN BGP EVPN fabric, built from a netascode `nac-nxos`
+data model. Terraform owns bring-up and the whole fabric: the BGP underlay
+(features, loopbacks, the point-to-point links, and the iBGP sessions that carry
+loopback reachability) and the `l2vpn evpn` overlay and VXLAN on top. The Cilium
+BGP peering is `../cilium/bgp.yaml`.
 
 Design: `docs/decisions/0002-fabric-as-code-lives-here.md` and the spec beside
 it.

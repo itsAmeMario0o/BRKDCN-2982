@@ -17,11 +17,9 @@ operator supplies real targets and credentials at run time.
 
 The fabric-as-code and the cluster automation lane:
 
-- `terraform/` - the VXLAN EVPN underlay as a netascode `nac-nxos` data model.
-  Endpoints come from the `switch_urls` variable; credentials from the
-  environment. The committed data model is the reference design (no `url:`).
-- `ansible/` - the EVPN overlay (Jinja templates + data model) run device-direct
-  over NX-API (NX-OS API). Inventory hosts are placeholders; override with `-i`.
+- `terraform/` - the VXLAN EVPN underlay and overlay as a netascode `nac-nxos`
+  data model. Endpoints come from the `switch_urls` variable; credentials from
+  the environment. The committed data model is the reference design (no `url:`).
 - `cilium/bgp.yaml` - the Cilium AS-per-cluster BGP config (the CRDs, custom
   resource definitions, that peer each node to its leaf).
 - `gitops/` - Argo CD bootstrap and the app-of-apps tree. Argo runs in the

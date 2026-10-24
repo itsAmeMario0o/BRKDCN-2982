@@ -43,7 +43,7 @@ the north side.
 The Cilium BGP CRDs (custom resource definitions) live with the fabric config in this repo. See
 [`../../cilium/bgp.yaml`](../../cilium/bgp.yaml) for the applied manifest. The
 leaf underlay/overlay that terminates these sessions is in
-[`../../terraform/`](../../terraform/) and [`../../ansible/`](../../ansible/).
+[`../../terraform/`](../../terraform/).
 
 There is one `CiliumBGPClusterConfig` per node, because each node peers a
 different leaf address. The advertisement and peer config are shared. A trimmed

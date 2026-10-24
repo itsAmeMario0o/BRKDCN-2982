@@ -11,7 +11,7 @@ summary: Two delivery lanes, both starting from this repo. Argo CD pulls the clu
 This repository is the source of truth for the fabric-as-code and its pipeline. Two separate lanes keep the running environment matching the repo, because the two halves of the lab reconcile in different ways.
 
 - **The cluster lane is pull-based.** Kubernetes is declarative and can pull, so Argo CD runs inside the cluster and reconciles the manifests from this repo.
-- **The fabric lane is push-based.** The Nexus switches cannot run an in-cluster agent, so a continuous integration (CI) runner applies Terraform and Ansible against them when the fabric-as-code changes.
+- **The fabric lane is push-based.** The Nexus switches cannot run an in-cluster agent, so a continuous integration (CI) runner applies Terraform against them when the fabric-as-code changes.
 
 ## Cluster lane: Argo CD
 
@@ -40,18 +40,18 @@ See ADR [0001](https://github.com/{{ site.repo.owner }}/{{ site.repo.name }}/tre
 
 ## Fabric lane: a self-hosted runner
 
-A self-hosted GitHub Actions runner is the fabric lane, complementing Argo CD rather than replacing it. When the fabric-as-code changes, it applies the Terraform underlay and the Ansible overlay to the switches and verifies the result with pyATS.
+A self-hosted GitHub Actions runner is the fabric lane, complementing Argo CD rather than replacing it. When the fabric-as-code changes, it applies the Terraform fabric model (underlay and overlay) to the switches and verifies the result with pyATS.
 
-The runner lives on the operator's own workstation, where Terraform, Ansible, the SSH key, and the credentials already are. It reaches the switches through the operator's existing forwards, which a workflow pre-step brings up. Because the runner is the operator's machine, it reads the gitignored `terraform.tfvars` and the `NXOS_USERNAME` / `NXOS_PASSWORD` environment variables directly, so no GitHub Actions secrets are defined.
+The runner lives on the operator's own workstation, where Terraform, the SSH key, and the credentials already are. It reaches the switches through the operator's existing forwards, which a workflow pre-step brings up. Because the runner is the operator's machine, it reads the gitignored `terraform.tfvars` and the `NXOS_USERNAME` / `NXOS_PASSWORD` environment variables directly, so no GitHub Actions secrets are defined.
 
 <div class="callout callout-warning">
 <strong>The security model for a public-repo runner.</strong>
-A self-hosted runner attached to a public repository is a known hazard: a fork could open a pull request carrying a malicious workflow that runs on the runner. The workflow here defines <strong>no</strong> <code>pull_request</code> trigger. It runs only on <code>push</code> to <code>main</code> (paths <code>terraform/**</code>, <code>ansible/**</code>) and on manual <code>workflow_dispatch</code>, so fork code has nothing that executes on the runner. <code>concurrency</code> is limited to one, so two pushes cannot apply to the same fabric at once.
+A self-hosted runner attached to a public repository is a known hazard: a fork could open a pull request carrying a malicious workflow that runs on the runner. The workflow here defines <strong>no</strong> <code>pull_request</code> trigger. It runs only on <code>push</code> to <code>main</code> (path <code>terraform/**</code>) and on manual <code>workflow_dispatch</code>, so fork code has nothing that executes on the runner. <code>concurrency</code> is limited to one, so two pushes cannot apply to the same fabric at once.
 </div>
 
-The apply model is full continuous delivery: a push to `main` runs `terraform init`, `plan`, and `apply`, then `ansible-playbook`, then pyATS, with no manual gate. pyATS runs after the apply and fails the build loudly if the fabric is wrong. When the switch console is not reachable, the pyATS step reports a clean skip rather than failing the apply for the wrong reason.
+The apply model is full continuous delivery: a push to `main` runs `terraform init`, `plan`, and `apply`, then pyATS, with no manual gate. pyATS runs after the apply and fails the build loudly if the fabric is wrong. When the switch console is not reachable, the pyATS step reports a clean skip rather than failing the apply for the wrong reason.
 
-The fabric lane is still a work in progress. The Terraform and Ansible models do not yet apply cleanly to the current topology, so an operator builds the fabric by hand today, and the CLI on the [underlay]({{ '/underlay/' | relative_url }}) and [overlay]({{ '/overlay/' | relative_url }}) pages is the current source of truth. The cluster lane, by contrast, runs today: Argo CD reconciles the `gitops/apps/` workloads from `main`.
+The fabric lane is still a work in progress. The Terraform model does not yet apply cleanly to the current topology, so an operator builds the fabric by hand today, and the CLI on the [underlay]({{ '/underlay/' | relative_url }}) and [overlay]({{ '/overlay/' | relative_url }}) pages is the current source of truth. The cluster lane, by contrast, runs today: Argo CD reconciles the `gitops/apps/` workloads from `main`.
 
 See ADR [0003](https://github.com/{{ site.repo.owner }}/{{ site.repo.name }}/tree/{{ site.repo.branch }}/docs/decisions) for the full trade-off, including the one-click gate that is the obvious upgrade path if the no-gate choice changes.
 

@@ -434,6 +434,21 @@ nxos:
             - address_family: l2vpn-evpn
               send_community_standard: true
               send_community_extended: true
+          vrfs:
+          - vrf: tenant1
+            address_families:
+            - address_family: ipv4-unicast
+              advertise_l2vpn_evpn: true
+              maximum_paths: 8
+              redistributions:
+              - protocol: direct
+                route_map: RM-REDIST-DIRECT
+            neighbors:
+            - ip: 10.0.50.11
+              remote_as: '65001'
+              description: cilium-node
+              address_families:
+              - address_family: ipv4-unicast
         pim:
           rps:
           - address: 10.254.254.254
@@ -452,7 +467,7 @@ nxos:
           source_ip: 192.168.255.51
           vrf: management
       fabric_forwarding:
-        anycast_gateway_mac: "00:00:00:00:12:34"
+        anycast_gateway_mac: 00:00:00:00:12:34
       vlan:
         vlans:
         - id: 50
@@ -482,6 +497,11 @@ nxos:
         - vni: 10200
           rd: auto
           route_target_both_auto: true
+      route_maps:
+      - name: RM-REDIST-DIRECT
+        entries:
+        - order: 10
+          action: permit
   - name: leaf2
     configuration:
       feature:
@@ -614,6 +634,21 @@ nxos:
             - address_family: l2vpn-evpn
               send_community_standard: true
               send_community_extended: true
+          vrfs:
+          - vrf: tenant1
+            address_families:
+            - address_family: ipv4-unicast
+              advertise_l2vpn_evpn: true
+              maximum_paths: 8
+              redistributions:
+              - protocol: direct
+                route_map: RM-REDIST-DIRECT
+            neighbors:
+            - ip: 10.0.50.11
+              remote_as: '65001'
+              description: cilium-node
+              address_families:
+              - address_family: ipv4-unicast
         pim:
           rps:
           - address: 10.254.254.254
@@ -632,7 +667,7 @@ nxos:
           source_ip: 192.168.255.52
           vrf: management
       fabric_forwarding:
-        anycast_gateway_mac: "00:00:00:00:12:34"
+        anycast_gateway_mac: 00:00:00:00:12:34
       vlan:
         vlans:
         - id: 50
@@ -662,6 +697,11 @@ nxos:
         - vni: 10200
           rd: auto
           route_target_both_auto: true
+      route_maps:
+      - name: RM-REDIST-DIRECT
+        entries:
+        - order: 10
+          action: permit
   - name: leaf3
     configuration:
       feature:
@@ -794,6 +834,21 @@ nxos:
             - address_family: l2vpn-evpn
               send_community_standard: true
               send_community_extended: true
+          vrfs:
+          - vrf: tenant1
+            address_families:
+            - address_family: ipv4-unicast
+              advertise_l2vpn_evpn: true
+              maximum_paths: 8
+              redistributions:
+              - protocol: direct
+                route_map: RM-REDIST-DIRECT
+            neighbors:
+            - ip: 10.0.51.10
+              remote_as: '65001'
+              description: cilium-node
+              address_families:
+              - address_family: ipv4-unicast
         pim:
           rps:
           - address: 10.254.254.254
@@ -812,7 +867,7 @@ nxos:
           source_ip: 192.168.255.53
           vrf: management
       fabric_forwarding:
-        anycast_gateway_mac: "00:00:00:00:12:34"
+        anycast_gateway_mac: 00:00:00:00:12:34
       vlan:
         vlans:
         - id: 51
@@ -842,6 +897,11 @@ nxos:
         - vni: 10200
           rd: auto
           route_target_both_auto: true
+      route_maps:
+      - name: RM-REDIST-DIRECT
+        entries:
+        - order: 10
+          action: permit
   - name: leaf4
     configuration:
       feature:
@@ -974,6 +1034,21 @@ nxos:
             - address_family: l2vpn-evpn
               send_community_standard: true
               send_community_extended: true
+          vrfs:
+          - vrf: tenant1
+            address_families:
+            - address_family: ipv4-unicast
+              advertise_l2vpn_evpn: true
+              maximum_paths: 8
+              redistributions:
+              - protocol: direct
+                route_map: RM-REDIST-DIRECT
+            neighbors:
+            - ip: 10.0.51.10
+              remote_as: '65001'
+              description: cilium-node
+              address_families:
+              - address_family: ipv4-unicast
         pim:
           rps:
           - address: 10.254.254.254
@@ -992,7 +1067,7 @@ nxos:
           source_ip: 192.168.255.54
           vrf: management
       fabric_forwarding:
-        anycast_gateway_mac: "00:00:00:00:12:34"
+        anycast_gateway_mac: 00:00:00:00:12:34
       vlan:
         vlans:
         - id: 51
@@ -1022,3 +1097,8 @@ nxos:
         - vni: 10200
           rd: auto
           route_target_both_auto: true
+      route_maps:
+      - name: RM-REDIST-DIRECT
+        entries:
+        - order: 10
+          action: permit

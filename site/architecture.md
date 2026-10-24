@@ -78,7 +78,7 @@ A single-AS design keeps the fabric quiet. Because every switch shares one AS nu
 
 ## The tenant, in numbers
 
-The overlay builds a symmetric integrated routing and bridging (IRB) fabric for one tenant with two subnets. The values below are the reference design; they are the same ones that the Ansible data model ships with.
+The overlay builds a symmetric integrated routing and bridging (IRB) fabric for one tenant with two subnets. The values below are the reference design; they are the same ones that the Terraform data model ships with.
 
 | Object | Value |
 |---|---|

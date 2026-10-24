@@ -4,9 +4,5 @@
 *.tfstate.*
 terraform.tfvars
 !terraform.tfvars.example
-# Ansible
-ansible/collections/
-ansible/.rendered/
-ansible/inventory.operator.yml
 # Python venvs
 **/.venv/

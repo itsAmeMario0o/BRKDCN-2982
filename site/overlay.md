@@ -307,5 +307,5 @@ Red reaching blue is the proof that the overlay works. The two hosts sit in diff
 
 <div class="callout">
 <strong>On automation.</strong>
-The intended way to build the overlay is network as code: an Ansible run against the overlay data model in <a href="https://github.com/{{ site.repo.owner }}/{{ site.repo.name }}/tree/{{ site.repo.branch }}/ansible">ansible/</a>, device-direct over NX-API (NX-OS API). That path is a work in progress and does not yet apply cleanly to the current topology, so the CLI (command-line interface) above is the source of truth for now.
+The intended way to build the overlay is network as code: a Terraform run against the overlay data model in <a href="https://github.com/{{ site.repo.owner }}/{{ site.repo.name }}/tree/{{ site.repo.branch }}/terraform">terraform/</a>, device-direct over NX-API (NX-OS API). That path is a work in progress and does not yet apply cleanly to the current topology, so the CLI (command-line interface) above is the source of truth for now.
 </div>

@@ -5,7 +5,6 @@ on:
     branches: [main]
     paths:
       - 'terraform/**'
-      - 'ansible/**'
   workflow_dispatch:
 
 # Never run two applies against the same fabric at once; do not cancel a
@@ -31,7 +30,7 @@ jobs:
             echo "FABRIC_ACCESS_SCRIPT not set; assuming the fabric is already reachable"
           fi
 
-      - name: Terraform apply (underlay)
+      - name: Terraform apply (fabric)
         working-directory: terraform
         # switch_urls come from the operator's tfvars, which lives outside this
         # fresh checkout and is copied in via FABRIC_TFVARS. Credentials come from
@@ -42,12 +41,6 @@ jobs:
           terraform init -input=false
           terraform plan -input=false -out tfplan
           terraform apply -input=false tfplan
-
-      - name: Ansible overlay
-        working-directory: ansible
-        run: |
-          : "${FABRIC_INVENTORY:?set FABRIC_INVENTORY to the operator inventory path}"
-          ansible-playbook -i "${FABRIC_INVENTORY}" overlay.yml
 
       - name: pyATS verify (reachable-or-skip)
         # Fails the build if the fabric is wrong. Skips cleanly (does not fail

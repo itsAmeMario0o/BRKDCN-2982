@@ -1,8 +1,7 @@
 # Builds the Jekyll workshop site under site/ and publishes it to GitHub Pages.
 # Trigger: any push to main that touches site/ or this workflow file, plus
 # manual runs from the Actions tab. This is independent of the fabric apply
-# workflow (fabric.yml), which only runs on changes under terraform/ and
-# ansible/.
+# workflow (fabric.yml), which only runs on changes under terraform/.
 
 name: Deploy Pages
 

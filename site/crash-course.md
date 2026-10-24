@@ -155,4 +155,4 @@ Open the `hubble_fabric_observability` dashboard in Splunk. The verdict breakdow
 kubectl -n argocd get applications      # the root application reports Synced and Healthy
 ```
 
-**Why.** Argo CD reconciles the cluster side from Git. Change the repo and the cluster follows, and a manual change self-heals on the next sync. The fabric side uses Terraform and Ansible, which is still a work in progress, so the switch CLI is the source of truth there today. See [Pipeline]({{ '/pipeline/' | relative_url }}).
+**Why.** Argo CD reconciles the cluster side from Git. Change the repo and the cluster follows, and a manual change self-heals on the next sync. The fabric side uses Terraform, which is still a work in progress, so the switch CLI is the source of truth there today. See [Pipeline]({{ '/pipeline/' | relative_url }}).
