@@ -23,9 +23,15 @@ This owns only the firewall side of the seam. The leaf side (the eBGP to AS
 
 Ansible logs in over SSH, and it cannot build its own way in. The firewall's
 management plane (a login user, aaa, ssh, host keys) has to exist before the
-playbook runs. On a rebuilt lab those lines belong in the firewall node's day-0
-config so a fresh device is reachable. The exact set is in
+playbook runs. The lab wires this into the firewall node's day-0 config, so a
+rebuilt firewall comes up reachable; the exact set is in
 [`firewall-bootstrap.txt`](firewall-bootstrap.txt).
+
+One wrinkle survives day-0: the firewall's password policy makes an
+admin-created user change its password at first login, and that interactive
+prompt hangs Ansible. Clear it once per rebuild with
+[`first-login.py`](first-login.py), which completes the change with the same
+password, before the playbook runs.
 
 ## Running it
 
@@ -43,8 +49,14 @@ never stored in the repo:
 ```bash
 cd ansible
 export ASA_PASSWORD="<the ansible user's password>"   # the lab keeps this as ASA_ANSIBLE_PASSWORD
+./.venv/bin/python first-login.py          # once per rebuild; no-op after
 ./.venv/bin/ansible-playbook firewall.yml
 ```
+
+On a freshly rebuilt lab the order is: bring up the port-forward, run
+`first-login.py` once to clear the forced password change, then run the
+playbook. On a firewall that is already up, `first-login.py` reports nothing to
+do and you can skip straight to the playbook.
 
 `inventory.yml` points at `127.0.0.1:2222` (the forward) and names the host
 `firewall`. The venv at `ansible/.venv` is gitignored; it holds `ansible-core`,

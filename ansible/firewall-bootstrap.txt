@@ -21,8 +21,10 @@ ssh version 2
 crypto key generate rsa modulus 2048
 crypto key generate eddsa edwards-curve ed25519
 
-! One wrinkle: when the firewall's password policy is on, a user an admin
-! creates must change its password at first login. That interactive prompt will
-! hang Ansible. Either clear it once by logging in by hand and setting the new
-! password (then store that), or pre-empt it in day-0. The eddsa host key lets a
-! modern SSH client connect without enabling legacy host-key algorithms.
+! One wrinkle day-0 cannot dodge: when the firewall's password policy is on, a
+! user an admin creates must change its password at first login, and that
+! interactive prompt hangs Ansible. There is no policy knob to turn it off. Clear
+! it once per rebuild with first-login.py, which completes the change with the
+! same password (minimum-changes is 0, so the stored password does not move). The
+! eddsa host key lets a modern SSH client connect without enabling legacy
+! host-key algorithms.
