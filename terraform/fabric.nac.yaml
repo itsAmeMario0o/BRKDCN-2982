@@ -1,23 +1,35 @@
-# NX-OS single-AS (65400) iBGP underlay for the cilium-evpn fabric.
-# Design: BRKDCN-2982 single-AS model. iBGP ipv4 over the P2P links, spines as
-# route-reflectors. Leaves advertise their loopbacks; the SPINES also advertise
-# their connected P2P /31s so a leaf can resolve another leaf's loopback next
-# hop (the reflected loopback keeps the originating leaf's P2P next hop, and
-# next-hop-self is ignored on reflected routes - so we make the transit links
-# routable instead). No eBGP knobs. Overlay (l2vpn evpn, iBGP RR) and the
-# Cilium eBGP host peering are Ansible's job. Schema: netascode nac-nxos v0.3.x.
-# Slice 1 added: PIM sparse-mode, anycast-RP (loopback254), VTEP anycast
-# secondary on loopback1, and the matching BGP networks. nac-nxos v0.3.x.
+# The whole Cilium EVPN fabric as one nac-nxos data model: the single-AS iBGP
+# underlay, the vPC leaf pairs, the VXLAN EVPN overlay, and the eBGP peering to
+# the Kubernetes nodes. Terraform (CiscoDevNet/nxos, over NX-API) renders and
+# applies it, and a plan reports "No changes" against the running fabric.
+#
+# The design in numbers:
+#   AS 65400        one autonomous system; the spines are route-reflectors
+#   AS 65001        the Kubernetes cluster, eBGP into the tenant VRF
+#   AS 65500        the border firewall, peered on leaf3/4 (left out of this model)
+#   loopback0       router-id and BGP source, 10.0.0.x
+#   loopback1       the leaf VTEP, 10.0.1.x, with a shared anycast secondary per
+#                   vPC pair (.100 on leaf1-2, .101 on leaf3-4) so a pair is one VTEP
+#   loopback254     the anycast rendezvous point 10.254.254.254, on both spines
+#   VNIs            10050/10051 the k8s segments, 10100/10200 shared, 50000 the L3VNI
+#   239.1.1.x       the multicast groups that carry broadcast and unknown traffic
+#   0000.0000.1234  the anycast gateway MAC, the same on every leaf
+#   tenant1         the tenant VRF; pod CIDRs arrive here as EVPN Type-5 routes
+
+
 nxos:
   devices:
+  # spine1: route-reflector and anycast-RP member
   - name: spine1
     configuration:
+      # what features to turn on
       feature:
         bgp: true
         pim: true
         nv_overlay: true
         evpn: true
       interfaces:
+        # loopback0 router-id, loopback254 the anycast-RP
         loopbacks:
         - id: 0
           ip:
@@ -29,6 +41,7 @@ nxos:
             address: 10.254.254.254/32
           pim:
             sparse_mode: true
+        # L3 links down to the leaves, mtu 9216 for VXLAN headroom
         ethernets:
         - id: 1/1
           shutdown: false
@@ -66,6 +79,7 @@ nxos:
           pim:
             sparse_mode: true
           mtu: 9216
+      # BGP: single-AS iBGP underlay, spines reflecting l2vpn evpn
       routing:
         bgp:
           asn: '65400'
@@ -156,14 +170,17 @@ nxos:
             set_address: 10.0.0.1
           - address: 10.254.254.254
             set_address: 10.0.0.2
+  # spine2: route-reflector and anycast-RP member
   - name: spine2
     configuration:
+      # what features to turn on
       feature:
         bgp: true
         pim: true
         nv_overlay: true
         evpn: true
       interfaces:
+        # loopback0 router-id, loopback254 the anycast-RP
         loopbacks:
         - id: 0
           ip:
@@ -175,6 +192,7 @@ nxos:
             address: 10.254.254.254/32
           pim:
             sparse_mode: true
+        # L3 links down to the leaves, mtu 9216 for VXLAN headroom
         ethernets:
         - id: 1/1
           shutdown: false
@@ -212,6 +230,7 @@ nxos:
           pim:
             sparse_mode: true
           mtu: 9216
+      # BGP: single-AS iBGP underlay, spines reflecting l2vpn evpn
       routing:
         bgp:
           asn: '65400'
@@ -302,8 +321,10 @@ nxos:
             set_address: 10.0.0.1
           - address: 10.254.254.254
             set_address: 10.0.0.2
+  # leaf1: VTEP, vPC member, and cluster peer
   - name: leaf1
     configuration:
+      # what features to turn on
       feature:
         bgp: true
         pim: true
@@ -313,6 +334,7 @@ nxos:
         interface_vlan: true
         evpn: true
       interfaces:
+        # loopback0 router-id, loopback1 the VTEP with the pair's anycast secondary
         loopbacks:
         - id: 0
           ip:
@@ -326,6 +348,7 @@ nxos:
             - address: 10.0.1.100/32
           pim:
             sparse_mode: true
+        # L3 uplinks to the spines (mtu 9216), and the vPC member ports (Eth1/3 peer-link, Eth1/4 host)
         ethernets:
         - id: 1/1
           shutdown: false
@@ -360,6 +383,7 @@ nxos:
           switchport:
             mode: access
             access_vlan: 50
+        # the VTEP: VXLAN source on loopback1, L2VNIs with multicast BUM, the L3VNI
         nve:
           source_interface_type: loopback
           source_interface_id: 1
@@ -374,6 +398,7 @@ nxos:
             mcast_group: 239.1.1.200
           - vni: 50000
             associate_vrf: true
+        # anycast gateways: the same SVI address on every leaf, so a host keeps its gateway anywhere
         vlans:
         - id: 50
           vrf: tenant1
@@ -394,6 +419,7 @@ nxos:
           vrf: tenant1
           ip:
             forward: true
+      # BGP: iBGP underlay, l2vpn-evpn to the spines, and the tenant-VRF eBGP to the cluster
       routing:
         bgp:
           asn: '65400'
@@ -454,6 +480,7 @@ nxos:
           - address: 10.254.254.254
             group_lists:
             - group_list: 239.0.0.0/8
+      # the vPC pair: peer-link Po500 and keepalive over mgmt, so two leaves act as one
       vpc:
         domain_id: 1
         peer_switch: true
@@ -468,7 +495,9 @@ nxos:
           vrf: management
       fabric_forwarding:
         anycast_gateway_mac: 00:00:00:00:12:34
+      # which VLAN maps to which VXLAN VNI
       vlan:
+        # anycast gateways: the same SVI address on every leaf, so a host keeps its gateway anywhere
         vlans:
         - id: 50
           vn_segment: 10050
@@ -478,6 +507,7 @@ nxos:
           vn_segment: 10200
         - id: 2001
           vn_segment: 50000
+      # the tenant VRF and its L3VNI 50000
       vrfs:
       - name: tenant1
         vni: 50000
@@ -486,6 +516,7 @@ nxos:
         - address_family: ipv4-unicast
           route_target_both_auto: true
           route_target_both_auto_evpn: true
+      # L2VNI route-targets, auto-derived from the AS and VNI
       evpn:
         vnis:
         - vni: 10050
@@ -497,13 +528,16 @@ nxos:
         - vni: 10200
           rd: auto
           route_target_both_auto: true
+      # permit-all map for redistributing the pod routes into BGP
       route_maps:
       - name: RM-REDIST-DIRECT
         entries:
         - order: 10
           action: permit
+  # leaf2: VTEP, vPC member, and cluster peer
   - name: leaf2
     configuration:
+      # what features to turn on
       feature:
         bgp: true
         pim: true
@@ -513,6 +547,7 @@ nxos:
         interface_vlan: true
         evpn: true
       interfaces:
+        # loopback0 router-id, loopback1 the VTEP with the pair's anycast secondary
         loopbacks:
         - id: 0
           ip:
@@ -526,6 +561,7 @@ nxos:
             - address: 10.0.1.100/32
           pim:
             sparse_mode: true
+        # L3 uplinks to the spines (mtu 9216), and the vPC member ports (Eth1/3 peer-link, Eth1/4 host)
         ethernets:
         - id: 1/1
           shutdown: false
@@ -560,6 +596,7 @@ nxos:
           switchport:
             mode: access
             access_vlan: 50
+        # the VTEP: VXLAN source on loopback1, L2VNIs with multicast BUM, the L3VNI
         nve:
           source_interface_type: loopback
           source_interface_id: 1
@@ -574,6 +611,7 @@ nxos:
             mcast_group: 239.1.1.200
           - vni: 50000
             associate_vrf: true
+        # anycast gateways: the same SVI address on every leaf, so a host keeps its gateway anywhere
         vlans:
         - id: 50
           vrf: tenant1
@@ -594,6 +632,7 @@ nxos:
           vrf: tenant1
           ip:
             forward: true
+      # BGP: iBGP underlay, l2vpn-evpn to the spines, and the tenant-VRF eBGP to the cluster
       routing:
         bgp:
           asn: '65400'
@@ -654,6 +693,7 @@ nxos:
           - address: 10.254.254.254
             group_lists:
             - group_list: 239.0.0.0/8
+      # the vPC pair: peer-link Po500 and keepalive over mgmt, so two leaves act as one
       vpc:
         domain_id: 1
         peer_switch: true
@@ -668,7 +708,9 @@ nxos:
           vrf: management
       fabric_forwarding:
         anycast_gateway_mac: 00:00:00:00:12:34
+      # which VLAN maps to which VXLAN VNI
       vlan:
+        # anycast gateways: the same SVI address on every leaf, so a host keeps its gateway anywhere
         vlans:
         - id: 50
           vn_segment: 10050
@@ -678,6 +720,7 @@ nxos:
           vn_segment: 10200
         - id: 2001
           vn_segment: 50000
+      # the tenant VRF and its L3VNI 50000
       vrfs:
       - name: tenant1
         vni: 50000
@@ -686,6 +729,7 @@ nxos:
         - address_family: ipv4-unicast
           route_target_both_auto: true
           route_target_both_auto_evpn: true
+      # L2VNI route-targets, auto-derived from the AS and VNI
       evpn:
         vnis:
         - vni: 10050
@@ -697,13 +741,16 @@ nxos:
         - vni: 10200
           rd: auto
           route_target_both_auto: true
+      # permit-all map for redistributing the pod routes into BGP
       route_maps:
       - name: RM-REDIST-DIRECT
         entries:
         - order: 10
           action: permit
+  # leaf3: VTEP, vPC member, and cluster peer
   - name: leaf3
     configuration:
+      # what features to turn on
       feature:
         bgp: true
         pim: true
@@ -713,6 +760,7 @@ nxos:
         interface_vlan: true
         evpn: true
       interfaces:
+        # loopback0 router-id, loopback1 the VTEP with the pair's anycast secondary
         loopbacks:
         - id: 0
           ip:
@@ -726,6 +774,7 @@ nxos:
             - address: 10.0.1.101/32
           pim:
             sparse_mode: true
+        # L3 uplinks to the spines (mtu 9216), and the vPC member ports (Eth1/3 peer-link, Eth1/4 host)
         ethernets:
         - id: 1/1
           shutdown: false
@@ -760,6 +809,7 @@ nxos:
           switchport:
             mode: access
             access_vlan: 51
+        # the VTEP: VXLAN source on loopback1, L2VNIs with multicast BUM, the L3VNI
         nve:
           source_interface_type: loopback
           source_interface_id: 1
@@ -774,6 +824,7 @@ nxos:
             mcast_group: 239.1.1.200
           - vni: 50000
             associate_vrf: true
+        # anycast gateways: the same SVI address on every leaf, so a host keeps its gateway anywhere
         vlans:
         - id: 51
           vrf: tenant1
@@ -794,6 +845,7 @@ nxos:
           vrf: tenant1
           ip:
             forward: true
+      # BGP: iBGP underlay, l2vpn-evpn to the spines, and the tenant-VRF eBGP to the cluster
       routing:
         bgp:
           asn: '65400'
@@ -854,6 +906,7 @@ nxos:
           - address: 10.254.254.254
             group_lists:
             - group_list: 239.0.0.0/8
+      # the vPC pair: peer-link Po500 and keepalive over mgmt, so two leaves act as one
       vpc:
         domain_id: 2
         peer_switch: true
@@ -868,7 +921,9 @@ nxos:
           vrf: management
       fabric_forwarding:
         anycast_gateway_mac: 00:00:00:00:12:34
+      # which VLAN maps to which VXLAN VNI
       vlan:
+        # anycast gateways: the same SVI address on every leaf, so a host keeps its gateway anywhere
         vlans:
         - id: 51
           vn_segment: 10051
@@ -878,6 +933,7 @@ nxos:
           vn_segment: 10200
         - id: 2001
           vn_segment: 50000
+      # the tenant VRF and its L3VNI 50000
       vrfs:
       - name: tenant1
         vni: 50000
@@ -886,6 +942,7 @@ nxos:
         - address_family: ipv4-unicast
           route_target_both_auto: true
           route_target_both_auto_evpn: true
+      # L2VNI route-targets, auto-derived from the AS and VNI
       evpn:
         vnis:
         - vni: 10051
@@ -897,13 +954,16 @@ nxos:
         - vni: 10200
           rd: auto
           route_target_both_auto: true
+      # permit-all map for redistributing the pod routes into BGP
       route_maps:
       - name: RM-REDIST-DIRECT
         entries:
         - order: 10
           action: permit
+  # leaf4: VTEP, vPC member, and cluster peer
   - name: leaf4
     configuration:
+      # what features to turn on
       feature:
         bgp: true
         pim: true
@@ -913,6 +973,7 @@ nxos:
         interface_vlan: true
         evpn: true
       interfaces:
+        # loopback0 router-id, loopback1 the VTEP with the pair's anycast secondary
         loopbacks:
         - id: 0
           ip:
@@ -926,6 +987,7 @@ nxos:
             - address: 10.0.1.101/32
           pim:
             sparse_mode: true
+        # L3 uplinks to the spines (mtu 9216), and the vPC member ports (Eth1/3 peer-link, Eth1/4 host)
         ethernets:
         - id: 1/1
           shutdown: false
@@ -960,6 +1022,7 @@ nxos:
           switchport:
             mode: access
             access_vlan: 51
+        # the VTEP: VXLAN source on loopback1, L2VNIs with multicast BUM, the L3VNI
         nve:
           source_interface_type: loopback
           source_interface_id: 1
@@ -974,6 +1037,7 @@ nxos:
             mcast_group: 239.1.1.200
           - vni: 50000
             associate_vrf: true
+        # anycast gateways: the same SVI address on every leaf, so a host keeps its gateway anywhere
         vlans:
         - id: 51
           vrf: tenant1
@@ -994,6 +1058,7 @@ nxos:
           vrf: tenant1
           ip:
             forward: true
+      # BGP: iBGP underlay, l2vpn-evpn to the spines, and the tenant-VRF eBGP to the cluster
       routing:
         bgp:
           asn: '65400'
@@ -1054,6 +1119,7 @@ nxos:
           - address: 10.254.254.254
             group_lists:
             - group_list: 239.0.0.0/8
+      # the vPC pair: peer-link Po500 and keepalive over mgmt, so two leaves act as one
       vpc:
         domain_id: 2
         peer_switch: true
@@ -1068,7 +1134,9 @@ nxos:
           vrf: management
       fabric_forwarding:
         anycast_gateway_mac: 00:00:00:00:12:34
+      # which VLAN maps to which VXLAN VNI
       vlan:
+        # anycast gateways: the same SVI address on every leaf, so a host keeps its gateway anywhere
         vlans:
         - id: 51
           vn_segment: 10051
@@ -1078,6 +1146,7 @@ nxos:
           vn_segment: 10200
         - id: 2001
           vn_segment: 50000
+      # the tenant VRF and its L3VNI 50000
       vrfs:
       - name: tenant1
         vni: 50000
@@ -1086,6 +1155,7 @@ nxos:
         - address_family: ipv4-unicast
           route_target_both_auto: true
           route_target_both_auto_evpn: true
+      # L2VNI route-targets, auto-derived from the AS and VNI
       evpn:
         vnis:
         - vni: 10051
@@ -1097,6 +1167,7 @@ nxos:
         - vni: 10200
           rd: auto
           route_target_both_auto: true
+      # permit-all map for redistributing the pod routes into BGP
       route_maps:
       - name: RM-REDIST-DIRECT
         entries:
