@@ -12,6 +12,9 @@
   hosts: firewall
   gather_facts: false
   tasks:
+    # The interfaces are brought administratively up in day-0 (like outside);
+    # "no shutdown" is not idempotent through asa_config, so it does not belong
+    # here. This owns their L3 border role.
     - name: Link to the first leaf pair
       cisco.asa.asa_config:
         parents: interface GigabitEthernet0/0
